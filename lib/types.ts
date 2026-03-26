@@ -26,6 +26,9 @@ export interface Project {
   createdAt: Date
   updatedAt: Date
   deadline?: Date
+  // Scrum specific settings
+  sprintDuration?: number // in weeks
+  totalSprints?: number
 }
 
 export const METHODOLOGY_INFO: Record<Methodology, { name: string; description: string; longDescription: string; icon: string }> = {

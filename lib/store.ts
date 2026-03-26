@@ -278,7 +278,9 @@ export const useProjectStore = create<ProjectStore>()(
           color: '#3b82f6',
           createdAt: now,
           updatedAt: now,
-          deadline: in3Months
+          deadline: in3Months,
+          sprintDuration: 2,
+          totalSprints: 6
         }
 
         const p1Tasks: Task[] = []
