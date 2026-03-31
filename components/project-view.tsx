@@ -13,6 +13,7 @@ import { TaskFormDialog } from './task-form-dialog'
 import { KanbanBoard } from './kanban-board'
 import { ProjectDiagram } from './project-diagram'
 import { RiskAnalysisView } from './risk-analysis-view'
+import { KpiManagement } from './kpi-management'
 import {
   ArrowLeft,
   Plus,
@@ -64,7 +65,7 @@ interface ProjectViewProps {
 
 export function ProjectView({ projectId }: ProjectViewProps) {
   const { projects, tasks, riskAnalyses, calculateProjectProgress, deleteProject, selectProject } = useProjectStore()
-  
+
   const project = projects.find(p => p.id === projectId)
   const projectAnalyses = riskAnalyses.filter(r => r.projectId === projectId)
   const [taskDialogOpen, setTaskDialogOpen] = useState(false)
@@ -72,9 +73,9 @@ export function ProjectView({ projectId }: ProjectViewProps) {
   const [editTask, setEditTask] = useState<Task | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
-  
+
   // Default view based on methodology
-  const [view, setView] = useState<'tree' | 'board' | 'diagram' | 'risk'>(() => {
+  const [view, setView] = useState<'tree' | 'board' | 'diagram' | 'risk' | 'kpi'>(() => {
     if (!project) return 'tree'
     if (project.methodology === 'kanban' || project.methodology === 'scrum') return 'board'
     if (project.methodology === 'waterfall') return 'diagram'
@@ -127,7 +128,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              
+
               <div className="flex items-center gap-3 overflow-hidden">
                 <div
                   className="h-5 w-5 sm:h-6 sm:w-6 rounded-full shadow-lg shadow-black/20 shrink-0"
@@ -163,7 +164,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
-              <Button 
+              <Button
                 onClick={() => handleAddTask(null)}
                 className="flex-1 sm:flex-none bg-primary text-primary-foreground rounded-full px-4 sm:px-6 hover:scale-105 transition-all shadow-lg font-bold h-9 sm:h-10 text-xs sm:text-sm"
               >
@@ -191,9 +192,9 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                     <FileText className="h-4 w-4 mr-2 text-primary" />
                     Gerar PDF (Visual/Relatório)
                   </DropdownMenuItem>
-                  
+
                   <DropdownMenuSeparator />
-                  
+
                   <div className="px-2 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Gerenciar</div>
                   <DropdownMenuItem>
                     <Settings className="h-4 w-4 mr-2" />
@@ -258,7 +259,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                     <div>
                       <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">Concluídas</p>
                       <p className="text-2xl font-black text-foreground">
-                        {projectTasks.length > 0 
+                        {projectTasks.length > 0
                           ? Math.round((completedTasks / projectTasks.length) * 100)
                           : 0
                         }%
@@ -277,7 +278,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                     <div>
                       <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">Prazo Final</p>
                       <p className="text-lg font-black text-foreground">
-                        {project.deadline 
+                        {project.deadline
                           ? new Date(project.deadline).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
                           : 'Sem prazo'
                         }
@@ -304,8 +305,8 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                     </div>
                     <div className="relative">
                       <Progress value={progress} className="h-3 rounded-full" />
-                      <div 
-                        className="absolute inset-0 blur-lg opacity-20 -z-10 rounded-full" 
+                      <div
+                        className="absolute inset-0 blur-lg opacity-20 -z-10 rounded-full"
                         style={{ backgroundColor: project.color }}
                       />
                     </div>
@@ -313,9 +314,9 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                 </CardContent>
               </Card>
 
-              <Card className="glass-card flex items-center p-2">
-                <div className="grid grid-cols-4 w-full bg-secondary/20 rounded-xl p-1 gap-1">
-                  <button 
+              <Card className="glass-card flex items-center p-2 mt-4 md:mt-0">
+                <div className="grid grid-cols-5 w-full bg-secondary/20 rounded-xl p-1 gap-1">
+                  <button
                     onClick={() => setView('tree')}
                     className={cn(
                       "flex flex-col items-center justify-center py-2 rounded-lg transition-all",
@@ -325,7 +326,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                     <ListTree className="h-4 w-4 mb-1" />
                     <span className="text-[9px] font-black uppercase tracking-tighter">Estrutura</span>
                   </button>
-                  <button 
+                  <button
                     onClick={() => setView('board')}
                     className={cn(
                       "flex flex-col items-center justify-center py-2 rounded-lg transition-all",
@@ -335,7 +336,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                     <LayoutDashboard className="h-4 w-4 mb-1" />
                     <span className="text-[9px] font-black uppercase tracking-tighter">Kanban</span>
                   </button>
-                  <button 
+                  <button
                     onClick={() => setView('diagram')}
                     className={cn(
                       "flex flex-col items-center justify-center py-2 rounded-lg transition-all",
@@ -345,7 +346,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                     <Network className="h-4 w-4 mb-1" />
                     <span className="text-[9px] font-black uppercase tracking-tighter">Diagrama</span>
                   </button>
-                  <button 
+                  <button
                     onClick={() => setView('risk')}
                     className={cn(
                       "flex flex-col items-center justify-center py-2 rounded-lg transition-all",
@@ -355,6 +356,16 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                     <ShieldAlert className="h-4 w-4 mb-1" />
                     <span className="text-[9px] font-black uppercase tracking-tighter">Riscos</span>
                   </button>
+                  <button
+                    onClick={() => setView('kpi')}
+                    className={cn(
+                      "flex flex-col items-center justify-center py-2 rounded-lg transition-all",
+                      view === 'kpi' ? "bg-background shadow-lg text-green-500" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Target className="h-4 w-4 mb-1" />
+                    <span className="text-[9px] font-black uppercase tracking-tighter">Metas</span>
+                  </button>
                 </div>
               </Card>
             </div>
@@ -363,11 +374,13 @@ export function ProjectView({ projectId }: ProjectViewProps) {
           {/* Content Area */}
           <div className={cn("flex-1 min-h-0 pb-10 transition-all duration-500", isExpanded && "pb-0")}>
             {view === 'risk' ? (
-              <RiskAnalysisView 
-                projectId={projectId} 
+              <RiskAnalysisView
+                projectId={projectId}
                 isExpanded={isExpanded}
                 onToggleExpand={() => setIsExpanded(!isExpanded)}
               />
+            ) : view === 'kpi' ? (
+              <KpiManagement projectId={projectId} />
             ) : (
               <Card className={cn("glass-card border-none shadow-xl transition-all duration-500", isExpanded && "shadow-2xl ring-1 ring-white/10")}>
                 <CardHeader className="pb-4 border-b border-white/5">
@@ -407,7 +420,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                     </div>
                   )}
                   {view === 'board' && (
-                    <KanbanBoard 
+                    <KanbanBoard
                       projectId={projectId}
                       onAddTask={handleAddTask}
                       onEditTask={handleEditTask}
@@ -441,7 +454,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Projeto</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o projeto &quot;{project.name}&quot;? 
+              Tem certeza que deseja excluir o projeto &quot;{project.name}&quot;?
               Esta acao nao pode ser desfeita e todas as tarefas serao perdidas.
             </AlertDialogDescription>
           </AlertDialogHeader>

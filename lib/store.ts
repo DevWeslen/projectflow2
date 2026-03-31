@@ -2,7 +2,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Project, Task, Methodology, TaskStatus, RiskAnalysis } from './types'
+import type { Project, Task, Methodology, TaskStatus, RiskAnalysis, User, UserRole } from './types'
 import { autoStatusFromProgress } from './types'
 
 interface ProjectStore {
@@ -10,30 +10,37 @@ interface ProjectStore {
   tasks: Task[]
   riskAnalyses: RiskAnalysis[]
   selectedProjectId: string | null
-  
-  // Project actions
+
   addProject: (project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>) => string
   updateProject: (id: string, updates: Partial<Project>) => void
   deleteProject: (id: string) => void
   selectProject: (id: string | null) => void
-  
-  // Task actions
+
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'order'>) => string
   updateTask: (id: string, updates: Partial<Task>) => void
   deleteTask: (id: string) => void
-  
-  // Risk Analysis actions
+
   addRiskAnalysis: (analysis: Omit<RiskAnalysis, 'id' | 'createdAt' | 'updatedAt'>) => string
   updateRiskAnalysis: (id: string, updates: Partial<RiskAnalysis>) => void
   deleteRiskAnalysis: (id: string) => void
-  
-  // Computed
+
   getProjectTasks: (projectId: string) => Task[]
   getChildTasks: (parentId: string) => Task[]
   getRootTasks: (projectId: string) => Task[]
   calculateTaskProgress: (taskId: string) => number
   calculateProjectProgress: (projectId: string) => number
   seedExamples: () => void
+
+  activeView: 'main' | 'consolidated' | 'users'
+  setActiveView: (view: 'main' | 'consolidated' | 'users') => void
+
+  user: User | null
+  users: User[]
+  login: (username: string, password: string) => boolean
+  logout: () => void
+  addUser: (userData: Omit<User, 'id'>) => void
+  updateUser: (id: string, updates: Partial<User>) => void
+  deleteUser: (id: string) => void
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 15)
@@ -45,23 +52,103 @@ export const useProjectStore = create<ProjectStore>()(
       tasks: [],
       riskAnalyses: [],
       selectedProjectId: null,
-      
+      activeView: 'main',
+      user: null,
+      users: [
+        { id: '1', name: 'Admin TI', username: 'admin', role: 'admin' },
+        { id: '2', name: 'Diretoria Princesa', username: 'diretor', role: 'conselho' },
+        { id: '3', name: 'Gerente Operacional', username: 'gerente', role: 'gerencia' },
+      ],
+
+      login: (username, password) => {
+        const user = get().users.find((u) => u.username === username)
+        if (user && password === '123') {
+          set({ user })
+          return true
+        }
+        return false
+      },
+
+      logout: () => {
+        set({ user: null, selectedProjectId: null })
+      },
+
+      addUser: (userData) => {
+        const id = generateId()
+        set((state) => ({
+          users: [...state.users, { ...userData, id }]
+        }))
+      },
+
+      updateUser: (id, updates) => {
+        set((state) => ({
+          users: state.users.map((u) => (u.id === id ? { ...u, ...updates } : u))
+        }))
+      },
+
+      deleteUser: (id) => {
+        set((state) => ({
+          users: state.users.filter((u) => u.id !== id)
+        }))
+      },
+
+      setActiveView: (view) => {
+        set({ activeView: view })
+      },
+
+      selectProject: (id) => {
+        set({ selectedProjectId: id, activeView: id ? 'main' : get().activeView })
+      },
+
       addProject: (projectData) => {
         const id = generateId()
         const now = new Date()
+
+        const startYear = now.getFullYear()
+        const endYear = projectData.deadline
+          ? new Date(projectData.deadline).getFullYear()
+          : startYear
+
+        const baseKpis = projectData.generalKpis || []
+        const numYears = Math.max(1, endYear - startYear + 1)
+
+        const autoYearlyGoals = Array.from({ length: numYears }, (_, i) => {
+          const year = startYear + i
+          const isFirst = i === 0
+          const isLast = i === numYears - 1
+          const startDate = isFirst ? new Date(now) : new Date(year, 0, 1)
+          const endDate = isLast && projectData.deadline
+            ? new Date(projectData.deadline)
+            : new Date(year, 11, 31)
+
+          const yearKpis = baseKpis.map(k => ({
+            ...k,
+            current: 0,
+            target: k.aggregation === 'sum'
+              ? Math.round((k.target / numYears) * 100) / 100
+              : k.target
+          }))
+
+          return { id: generateId(), year, startDate, endDate, kpis: yearKpis }
+        })
+
         const project: Project = {
           ...projectData,
           id,
           createdAt: now,
-          updatedAt: now
+          updatedAt: now,
+          category: projectData.category || 'geral',
+          generalKpis: baseKpis,
+          yearlyGoals: projectData.yearlyGoals || autoYearlyGoals
         }
-        set((state) => ({ 
+
+        set((state) => ({
           projects: [...state.projects, project],
           selectedProjectId: id
         }))
         return id
       },
-      
+
       updateProject: (id, updates) => {
         set((state) => ({
           projects: state.projects.map((p) =>
@@ -69,7 +156,7 @@ export const useProjectStore = create<ProjectStore>()(
           )
         }))
       },
-      
+
       deleteProject: (id) => {
         set((state) => ({
           projects: state.projects.filter((p) => p.id !== id),
@@ -78,19 +165,15 @@ export const useProjectStore = create<ProjectStore>()(
           selectedProjectId: state.selectedProjectId === id ? null : state.selectedProjectId
         }))
       },
-      
-      selectProject: (id) => {
-        set({ selectedProjectId: id })
-      },
-      
+
       addTask: (taskData) => {
         const id = generateId()
         const now = new Date()
         const state = get()
-        const siblingTasks = taskData.parentId 
+        const siblingTasks = taskData.parentId
           ? state.tasks.filter(t => t.parentId === taskData.parentId)
           : state.tasks.filter(t => t.projectId === taskData.projectId && t.parentId === null)
-        
+
         const task: Task = {
           ...taskData,
           id,
@@ -101,7 +184,7 @@ export const useProjectStore = create<ProjectStore>()(
         set((state) => ({ tasks: [...state.tasks, task] }))
         return id
       },
-      
+
       updateTask: (id, updates) => {
         set((state) => {
           const tasks = [...state.tasks]
@@ -112,17 +195,14 @@ export const useProjectStore = create<ProjectStore>()(
           const project = state.projects.find(p => p.id === task.projectId)
           const isKanban = project?.methodology === 'kanban'
 
-          // 1. Update the target task
           const updatedTask = { ...task, ...updates, updatedAt: new Date() }
-          
-          // If progress changed, handle Kanban status
+
           if (updates.progress !== undefined && !updates.status && isKanban) {
             updatedTask.status = autoStatusFromProgress(updatedTask.progress)
           }
-          
+
           tasks[taskIndex] = updatedTask
 
-          // 2. Recursively update ancestors
           let currentParentId = updatedTask.parentId
           while (currentParentId) {
             const parentIndex = tasks.findIndex(t => t.id === currentParentId)
@@ -130,27 +210,18 @@ export const useProjectStore = create<ProjectStore>()(
 
             const parent = tasks[parentIndex]
             const children = tasks.filter(t => t.parentId === currentParentId)
-            
-            // Calculate new progress for parent (median of children)
-            const childProgresses = children.map(c => {
-               // If it's the child we just updated, use the new value
-               return c.id === (currentParentId === updatedTask.parentId ? updatedTask.id : '') 
-                 ? updatedTask.progress 
-                 : c.progress
-            })
-            
-            // Wait, I need to use the actual latest values in the tasks array
+
             const latestChildProgresses = children.map(c => {
-                const found = tasks.find(t => t.id === c.id)
-                return found ? found.progress : c.progress
+              const found = tasks.find(t => t.id === c.id)
+              return found ? found.progress : c.progress
             })
 
             const sorted = [...latestChildProgresses].sort((a, b) => a - b)
             const mid = Math.floor(sorted.length / 2)
             let newProgress = 0
             if (sorted.length > 0) {
-              newProgress = sorted.length % 2 === 0 
-                ? (sorted[mid - 1] + sorted[mid]) / 2 
+              newProgress = sorted.length % 2 === 0
+                ? (sorted[mid - 1] + sorted[mid]) / 2
                 : sorted[mid]
             }
 
@@ -166,10 +237,9 @@ export const useProjectStore = create<ProjectStore>()(
           return { tasks }
         })
       },
-      
+
       deleteTask: (id) => {
         const state = get()
-        // Recursivamente deletar todas as subtarefas
         const deleteRecursively = (taskId: string): string[] => {
           const children = state.tasks.filter(t => t.parentId === taskId)
           const childIds = children.flatMap(c => deleteRecursively(c.id))
@@ -207,153 +277,229 @@ export const useProjectStore = create<ProjectStore>()(
           riskAnalyses: state.riskAnalyses.filter((r) => r.id !== id)
         }))
       },
-      
+
       getProjectTasks: (projectId) => {
         return get().tasks.filter((t) => t.projectId === projectId)
       },
-      
+
       getChildTasks: (parentId) => {
         return get().tasks
           .filter((t) => t.parentId === parentId)
           .sort((a, b) => a.order - b.order)
       },
-      
+
       getRootTasks: (projectId) => {
         return get().tasks
           .filter((t) => t.projectId === projectId && t.parentId === null)
           .sort((a, b) => a.order - b.order)
       },
-      
+
       calculateTaskProgress: (taskId) => {
         const state = get()
         const children = state.tasks.filter(t => t.parentId === taskId)
-        
+
         if (children.length === 0) {
-          // Tarefa folha - retorna seu próprio progresso
           const task = state.tasks.find(t => t.id === taskId)
           return task?.progress ?? 0
         }
-        
-        // Calcula a mediana dos progressos das subtarefas
+
         const childProgresses = children.map(c => get().calculateTaskProgress(c.id))
         const sorted = [...childProgresses].sort((a, b) => a - b)
         const mid = Math.floor(sorted.length / 2)
-        
+
         if (sorted.length % 2 === 0) {
           return (sorted[mid - 1] + sorted[mid]) / 2
         }
         return sorted[mid]
       },
-      
+
       calculateProjectProgress: (projectId) => {
         const state = get()
         const rootTasks = state.tasks.filter(t => t.projectId === projectId && t.parentId === null)
-        
+
         if (rootTasks.length === 0) return 0
-        
-        // Calcula a mediana dos progressos das tarefas raiz
+
         const progresses = rootTasks.map(t => get().calculateTaskProgress(t.id))
         const sorted = [...progresses].sort((a, b) => a - b)
         const mid = Math.floor(sorted.length / 2)
-        
+
         if (sorted.length % 2 === 0) {
           return (sorted[mid - 1] + sorted[mid]) / 2
         }
         return sorted[mid]
       },
-      
+
       seedExamples: () => {
         const now = new Date()
-        const in2Weeks = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
-        const in1Month = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-        const in3Months = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000)
-        
-        // 1. Projeto Scrum (E-commerce)
-        const project1Id = generateId()
-        const project1: Project = {
-          id: project1Id,
-          name: 'Plataforma E-commerce V2',
-          description: 'Desenvolvimento da nova versão da plataforma com foco em mobile e performance.',
+        const gid = generateId
+
+        // Helper: build yearly goals for given KPIs and years, with optional realized ratios
+        const mkGoals = (
+          kpis: { id: string; name: string; target: number; current: number; unit: string; aggregation: 'sum' | 'average' }[],
+          years: number[],
+          realizedRatios: number[]
+        ) => years.map((year, i) => ({
+          id: gid(),
+          year,
+          startDate: new Date(year, 0, 1),
+          endDate: new Date(year, 11, 31),
+          kpis: kpis.map(k => ({
+            ...k,
+            target: k.aggregation === 'sum' ? Math.round(k.target / years.length) : k.target,
+            current: i < realizedRatios.length
+              ? Math.round((k.aggregation === 'sum' ? k.target / years.length : k.target) * realizedRatios[i])
+              : 0
+          }))
+        }))
+
+        // ── PROJECT 1: Renovação de Frota (2026-2028) ─────────────
+        const p1Id = gid()
+        const p1Kpis = [
+          { id: 'p1k1', name: 'Ônibus Renovados', target: 120, current: 28, unit: 'un', aggregation: 'sum' as const },
+          { id: 'p1k2', name: 'Redução de Consumo', target: 18, current: 6, unit: '%', aggregation: 'average' as const },
+          { id: 'p1k3', name: 'Investimento Total', target: 24000000, current: 5600000, unit: 'R$', aggregation: 'sum' as const },
+          { id: 'p1k4', name: 'CO₂ Evitado', target: 900, current: 210, unit: 't', aggregation: 'sum' as const },
+        ]
+        const p1: Project = {
+          id: p1Id,
+          name: 'Renovação de Frota 2026–2028',
+          description: 'Substituição progressiva dos veículos com mais de 10 anos por modelos Euro 6 e elétricos, reduzindo emissões e custos operacionais.',
+          methodology: 'waterfall',
+          color: '#006838',
+          createdAt: now,
+          updatedAt: now,
+          deadline: new Date(2028, 11, 31),
+          category: 'Frota',
+          generalKpis: p1Kpis,
+          yearlyGoals: mkGoals(p1Kpis, [2026, 2027, 2028], [0.23, 0, 0])
+        }
+        const p1Tasks: Task[] = []
+        const p1t1 = gid(), p1t2 = gid(), p1t3 = gid()
+        p1Tasks.push({ id: p1t1, projectId: p1Id, parentId: null, title: 'Fase 1 – Diagnóstico e Licitação', status: 'done', progress: 100, order: 0, createdAt: now, updatedAt: now })
+        p1Tasks.push({ id: gid(), projectId: p1Id, parentId: p1t1, title: 'Levantamento da frota atual', status: 'done', progress: 100, order: 0, createdAt: now, updatedAt: now })
+        p1Tasks.push({ id: gid(), projectId: p1Id, parentId: p1t1, title: 'Edital de licitação', status: 'done', progress: 100, order: 1, createdAt: now, updatedAt: now })
+        p1Tasks.push({ id: gid(), projectId: p1Id, parentId: p1t1, title: 'Contrato com fabricante', status: 'done', progress: 100, order: 2, createdAt: now, updatedAt: now })
+        p1Tasks.push({ id: p1t2, projectId: p1Id, parentId: null, title: 'Fase 2 – Aquisição 1ª Leva (40 ônibus)', status: 'in-progress', progress: 0, order: 1, createdAt: now, updatedAt: now })
+        p1Tasks.push({ id: gid(), projectId: p1Id, parentId: p1t2, title: 'Pagamento entrada fabricante', status: 'done', progress: 100, order: 0, createdAt: now, updatedAt: now })
+        p1Tasks.push({ id: gid(), projectId: p1Id, parentId: p1t2, title: 'Entrega e vistoria dos 40 veículos', status: 'in-progress', progress: 70, order: 1, createdAt: now, updatedAt: now })
+        p1Tasks.push({ id: gid(), projectId: p1Id, parentId: p1t2, title: 'Treinamento de motoristas (Nova Tecnologia)', status: 'in-progress', progress: 40, order: 2, createdAt: now, updatedAt: now })
+        p1Tasks.push({ id: p1t3, projectId: p1Id, parentId: null, title: 'Fase 3 – Aquisição 2ª e 3ª Levas (80 ônibus)', status: 'todo', progress: 0, order: 2, createdAt: now, updatedAt: now })
+
+        // ── PROJECT 2: Excelência Operacional (2026) ──────────────
+        const p2Id = gid()
+        const p2Kpis = [
+          { id: 'p2k1', name: 'Pontualidade', target: 95, current: 88, unit: '%', aggregation: 'average' as const },
+          { id: 'p2k2', name: 'NPS Passageiros', target: 75, current: 62, unit: 'pts', aggregation: 'average' as const },
+          { id: 'p2k3', name: 'Ocorrências Resolvidas', target: 480, current: 312, unit: 'un', aggregation: 'sum' as const },
+          { id: 'p2k4', name: 'Passageiros / Mês', target: 2400000, current: 2180000, unit: 'pax', aggregation: 'average' as const },
+        ]
+        const p2: Project = {
+          id: p2Id,
+          name: 'Excelência Operacional 2026',
+          description: 'Programa estruturado de melhoria de pontualidade, satisfação e redução de ocorrências em toda a malha viária.',
+          methodology: 'kanban',
+          color: '#F9A825',
+          createdAt: now,
+          updatedAt: now,
+          deadline: new Date(2026, 11, 31),
+          category: 'Operações',
+          generalKpis: p2Kpis,
+          yearlyGoals: mkGoals(p2Kpis, [2026], [0.84])
+        }
+        const p2Tasks: Task[] = []
+        const p2t1 = gid(), p2t2 = gid()
+        p2Tasks.push({ id: gid(), projectId: p2Id, parentId: null, title: 'Implantação de Painéis de Controle em Tempo Real', status: 'done', progress: 100, order: 0, createdAt: now, updatedAt: now })
+        p2Tasks.push({ id: p2t1, projectId: p2Id, parentId: null, title: 'Reestruturação de Itinerários Críticos', status: 'in-progress', progress: 0, order: 1, createdAt: now, updatedAt: now })
+        p2Tasks.push({ id: gid(), projectId: p2Id, parentId: p2t1, title: 'Mapeamento de linhas com atraso > 5min', status: 'done', progress: 100, order: 0, createdAt: now, updatedAt: now })
+        p2Tasks.push({ id: gid(), projectId: p2Id, parentId: p2t1, title: 'Ajuste de horários no sistema', status: 'in-progress', progress: 60, order: 1, createdAt: now, updatedAt: now })
+        p2Tasks.push({ id: gid(), projectId: p2Id, parentId: p2t1, title: 'Comunicação ao público', status: 'todo', progress: 0, order: 2, createdAt: now, updatedAt: now })
+        p2Tasks.push({ id: p2t2, projectId: p2Id, parentId: null, title: 'Campanha Satisfação & NPS Trimestral', status: 'in-progress', progress: 0, order: 2, createdAt: now, updatedAt: now })
+        p2Tasks.push({ id: gid(), projectId: p2Id, parentId: p2t2, title: 'Pesquisa Q1 (Jan-Mar)', status: 'done', progress: 100, order: 0, createdAt: now, updatedAt: now })
+        p2Tasks.push({ id: gid(), projectId: p2Id, parentId: p2t2, title: 'Pesquisa Q2 (Abr-Jun)', status: 'in-progress', progress: 50, order: 1, createdAt: now, updatedAt: now })
+        p2Tasks.push({ id: gid(), projectId: p2Id, parentId: p2t2, title: 'Pesquisa Q3 e Q4', status: 'todo', progress: 0, order: 2, createdAt: now, updatedAt: now })
+
+        // ── PROJECT 3: Digitalização & App (2026-2027) ────────────
+        const p3Id = gid()
+        const p3Kpis = [
+          { id: 'p3k1', name: 'Usuários Ativos App', target: 350000, current: 42000, unit: 'usr', aggregation: 'sum' as const },
+          { id: 'p3k2', name: 'Bilhetagem Digital', target: 60, current: 18, unit: '%', aggregation: 'average' as const },
+          { id: 'p3k3', name: 'Redução Tickets Suporte', target: 40, current: 12, unit: '%', aggregation: 'average' as const },
+          { id: 'p3k4', name: 'Investimento TI', target: 3800000, current: 890000, unit: 'R$', aggregation: 'sum' as const },
+        ]
+        const p3: Project = {
+          id: p3Id,
+          name: 'Digitalização & App Princesa',
+          description: 'Desenvolvimento e lançamento do super aplicativo de mobilidade com compra de passagens, rastreamento em tempo real e programa de fidelidade.',
           methodology: 'scrum',
           color: '#3b82f6',
           createdAt: now,
           updatedAt: now,
-          deadline: in3Months,
+          deadline: new Date(2027, 5, 30),
           sprintDuration: 2,
-          totalSprints: 6
+          totalSprints: 12,
+          category: 'TI',
+          generalKpis: p3Kpis,
+          yearlyGoals: mkGoals(p3Kpis, [2026, 2027], [0.22, 0])
         }
+        const p3Tasks: Task[] = []
+        const p3t1 = gid(), p3t2 = gid(), p3t3 = gid()
+        p3Tasks.push({ id: p3t1, projectId: p3Id, parentId: null, title: 'Épico 1 – App MVP (Login, Linhas, Mapa)', status: 'done', progress: 100, order: 0, createdAt: now, updatedAt: now, sprint: 1 })
+        p3Tasks.push({ id: gid(), projectId: p3Id, parentId: p3t1, title: 'Autenticação e Perfil do Usuário', status: 'done', progress: 100, order: 0, createdAt: now, updatedAt: now, sprint: 1 })
+        p3Tasks.push({ id: gid(), projectId: p3Id, parentId: p3t1, title: 'Rastreamento GPS em tempo real', status: 'done', progress: 100, order: 1, createdAt: now, updatedAt: now, sprint: 2 })
+        p3Tasks.push({ id: gid(), projectId: p3Id, parentId: p3t1, title: 'Busca de linhas e horários', status: 'done', progress: 100, order: 2, createdAt: now, updatedAt: now, sprint: 2 })
+        p3Tasks.push({ id: p3t2, projectId: p3Id, parentId: null, title: 'Épico 2 – Bilhetagem Digital & Pagamentos', status: 'in-progress', progress: 0, order: 1, createdAt: now, updatedAt: now, sprint: 3 })
+        p3Tasks.push({ id: gid(), projectId: p3Id, parentId: p3t2, title: 'Integração Gateway Pix/Cartão', status: 'done', progress: 100, order: 0, createdAt: now, updatedAt: now, sprint: 3 })
+        p3Tasks.push({ id: gid(), projectId: p3Id, parentId: p3t2, title: 'Vale-Transporte Digital', status: 'in-progress', progress: 55, order: 1, createdAt: now, updatedAt: now, sprint: 4 })
+        p3Tasks.push({ id: gid(), projectId: p3Id, parentId: p3t2, title: 'QR Code na catraca', status: 'in-progress', progress: 30, order: 2, createdAt: now, updatedAt: now, sprint: 4 })
+        p3Tasks.push({ id: p3t3, projectId: p3Id, parentId: null, title: 'Épico 3 – Programa de Fidelidade e Notificações', status: 'todo', progress: 0, order: 2, createdAt: now, updatedAt: now, sprint: 7 })
 
-        const p1Tasks: Task[] = []
-        const t1Id = generateId()
-        p1Tasks.push({ id: t1Id, projectId: project1Id, parentId: null, title: 'Desenvolvimento Frontend', status: 'in-progress', progress: 0, order: 0, createdAt: now, updatedAt: now, sprint: 1, deadline: in1Month })
-        p1Tasks.push({ id: generateId(), projectId: project1Id, parentId: t1Id, title: 'Home Page Responsiva', status: 'done', progress: 100, order: 0, createdAt: now, updatedAt: now, sprint: 1 })
-        p1Tasks.push({ id: generateId(), projectId: project1Id, parentId: t1Id, title: 'Checkout Flow', status: 'in-progress', progress: 45, order: 1, createdAt: now, updatedAt: now, sprint: 2, deadline: in2Weeks })
-        p1Tasks.push({ id: generateId(), projectId: project1Id, parentId: t1Id, title: 'Busca e Filtros', status: 'todo', progress: 0, order: 2, createdAt: now, updatedAt: now, sprint: 3 })
-
-        const t2Id = generateId()
-        p1Tasks.push({ id: t2Id, projectId: project1Id, parentId: null, title: 'Core Backend API', status: 'in-progress', progress: 0, order: 1, createdAt: now, updatedAt: now, sprint: 1, deadline: in1Month })
-        p1Tasks.push({ id: generateId(), projectId: project1Id, parentId: t2Id, title: 'Integração de Pagamentos', status: 'in-progress', progress: 80, order: 0, createdAt: now, updatedAt: now, sprint: 2 })
-        p1Tasks.push({ id: generateId(), projectId: project1Id, parentId: t2Id, title: 'Autenticação JWT', status: 'done', progress: 100, order: 1, createdAt: now, updatedAt: now, sprint: 1 })
-
-        // 2. Projeto Kanban (Marketing Digital)
-        const project2Id = generateId()
-        const project2: Project = {
-          id: project2Id,
-          name: 'Campanha Lançamento Verão',
-          description: 'Gestão de ativos e tráfego para a campanha principal de vendas.',
-          methodology: 'kanban',
-          color: '#10b981',
-          createdAt: now,
-          updatedAt: now,
-          deadline: in1Month
-        }
-
-        const p2Tasks: Task[] = []
-        p2Tasks.push({ id: generateId(), projectId: project2Id, parentId: null, title: 'Design de Landing Pages', status: 'done', progress: 100, order: 0, createdAt: now, updatedAt: now })
-        
-        const t3Id = generateId()
-        p2Tasks.push({ id: t3Id, projectId: project2Id, parentId: null, title: 'Anúncios Social Media', status: 'in-progress', progress: 0, order: 1, createdAt: now, updatedAt: now, deadline: in2Weeks })
-        p2Tasks.push({ id: generateId(), projectId: project2Id, parentId: t3Id, title: 'Criativos para Instagram', status: 'done', progress: 100, order: 0, createdAt: now, updatedAt: now })
-        p2Tasks.push({ id: generateId(), projectId: project2Id, parentId: t3Id, title: 'Copywriting para Facebook', status: 'review', progress: 90, order: 1, createdAt: now, updatedAt: now })
-        
-        p2Tasks.push({ id: generateId(), projectId: project2Id, parentId: null, title: 'E-mail Marketing Blast', status: 'todo', progress: 0, order: 2, createdAt: now, updatedAt: now })
-
-        // 3. Projeto Waterfall (Obra Civil Sede)
-        const project3Id = generateId()
-        const project3: Project = {
-          id: project3Id,
-          name: 'Reforma Sede Administrativa',
-          description: 'Projeto estrutural e estético de modernização do escritório central.',
-          methodology: 'waterfall',
+        // ── PROJECT 4: Expansão Intermunicipal (2026-2030) ─────────
+        const p4Id = gid()
+        const p4Kpis = [
+          { id: 'p4k1', name: 'Novas Linhas', target: 25, current: 4, unit: 'un', aggregation: 'sum' as const },
+          { id: 'p4k2', name: 'Novos Municípios', target: 18, current: 3, unit: 'mun', aggregation: 'sum' as const },
+          { id: 'p4k3', name: 'Receita Incremental', target: 15000000, current: 1200000, unit: 'R$', aggregation: 'sum' as const },
+          { id: 'p4k4', name: 'Ocupação Novas Linhas', target: 70, current: 58, unit: '%', aggregation: 'average' as const },
+        ]
+        const p4: Project = {
+          id: p4Id,
+          name: 'Expansão Intermunicipal 2026–2030',
+          description: 'Abertura de novas linhas e concessões para ampliar a cobertura regional, capturando mercados no Paraná não atendidos pela concorrência.',
+          methodology: 'lean',
           color: '#8b5cf6',
           createdAt: now,
           updatedAt: now,
-          deadline: in3Months
+          deadline: new Date(2030, 11, 31),
+          category: 'Expansão',
+          generalKpis: p4Kpis,
+          yearlyGoals: mkGoals(p4Kpis, [2026, 2027, 2028, 2029, 2030], [0.16, 0, 0, 0, 0])
         }
-
-        const p3Tasks: Task[] = []
-        const t4Id = generateId()
-        p3Tasks.push({ id: t4Id, projectId: project3Id, parentId: null, title: 'Fase 1: Fundações', status: 'done', progress: 100, order: 0, createdAt: now, updatedAt: now })
-        const t5Id = generateId()
-        p3Tasks.push({ id: t5Id, projectId: project3Id, parentId: null, title: 'Fase 2: Alvenaria', status: 'in-progress', progress: 0, order: 1, createdAt: now, updatedAt: now, deadline: in1Month })
-        p3Tasks.push({ id: generateId(), projectId: project3Id, parentId: t5Id, title: 'Paredes Internas', status: 'done', progress: 100, order: 0, createdAt: now, updatedAt: now })
-        p3Tasks.push({ id: generateId(), projectId: project3Id, parentId: t5Id, title: 'Revestimento Externo', status: 'in-progress', progress: 30, order: 1, createdAt: now, updatedAt: now })
-        
-        p3Tasks.push({ id: generateId(), projectId: project3Id, parentId: null, title: 'Fase 3: Acabamento', status: 'todo', progress: 0, order: 2, createdAt: now, updatedAt: now })
+        const p4Tasks: Task[] = []
+        const p4t1 = gid(), p4t2 = gid()
+        p4Tasks.push({ id: p4t1, projectId: p4Id, parentId: null, title: 'Fase 1 – Estudo de Mercado e Aprovações ANTT', status: 'in-progress', progress: 0, order: 0, createdAt: now, updatedAt: now })
+        p4Tasks.push({ id: gid(), projectId: p4Id, parentId: p4t1, title: 'Pesquisa O/D (Origem-Destino) Regional', status: 'done', progress: 100, order: 0, createdAt: now, updatedAt: now })
+        p4Tasks.push({ id: gid(), projectId: p4Id, parentId: p4t1, title: 'Protocolo de pedidos de autorização ANTT (12 linhas)', status: 'in-progress', progress: 45, order: 1, createdAt: now, updatedAt: now })
+        p4Tasks.push({ id: gid(), projectId: p4Id, parentId: p4t1, title: 'Aprovação e publicação no DOU (4 linhas piloto)', status: 'in-progress', progress: 20, order: 2, createdAt: now, updatedAt: now })
+        p4Tasks.push({ id: p4t2, projectId: p4Id, parentId: null, title: 'Fase 2 – Implantação das Linhas Piloto (4 linhas)', status: 'todo', progress: 0, order: 1, createdAt: now, updatedAt: now })
+        p4Tasks.push({ id: gid(), projectId: p4Id, parentId: p4t2, title: 'Definição de terminais e pontos de parada', status: 'todo', progress: 0, order: 0, createdAt: now, updatedAt: now })
+        p4Tasks.push({ id: gid(), projectId: p4Id, parentId: p4t2, title: 'Escala de motoristas e veículos', status: 'todo', progress: 0, order: 1, createdAt: now, updatedAt: now })
+        p4Tasks.push({ id: gid(), projectId: p4Id, parentId: p4t2, title: 'Campanha de divulgação regional', status: 'todo', progress: 0, order: 2, createdAt: now, updatedAt: now })
 
         set((state) => ({
-          projects: [...state.projects, project1, project2, project3],
-          tasks: [...state.tasks, ...p1Tasks, ...p2Tasks, ...p3Tasks]
+          projects: [...state.projects, p1, p2, p3, p4],
+          tasks: [...state.tasks, ...p1Tasks, ...p2Tasks, ...p3Tasks, ...p4Tasks]
         }))
       }
     }),
     {
-      name: 'project-store',
-      partialize: (state) => ({ 
-        projects: state.projects, 
+      name: 'project-flow-storage',
+      partialize: (state) => ({
+        projects: state.projects,
         tasks: state.tasks,
         riskAnalyses: state.riskAnalyses,
-        selectedProjectId: state.selectedProjectId 
+        selectedProjectId: state.selectedProjectId,
+        user: state.user,
+        users: state.users
       })
     }
   )

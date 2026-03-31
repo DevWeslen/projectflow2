@@ -38,11 +38,11 @@ export function Dashboard({ onNewProject }: DashboardProps) {
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <button
-               onClick={() => seedExamples()}
-               className="flex-1 sm:flex-none px-3 sm:px-4 py-2 border border-primary/20 text-primary rounded-full hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm font-medium glass"
+              onClick={() => seedExamples()}
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 border border-primary/20 text-primary rounded-full hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm font-medium glass"
             >
-               <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-               <span className="truncate">Gerar Demos</span>
+              <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="truncate">Gerar Demos</span>
             </button>
             <button
               onClick={onNewProject}
@@ -146,7 +146,7 @@ export function Dashboard({ onNewProject }: DashboardProps) {
             <h2 className="text-2xl font-bold text-foreground">Projetos Recentes</h2>
             <div className="h-px flex-1 bg-border/50 shadow-sm" />
           </div>
-          
+
           {projects.length === 0 ? (
             <Card className="glass-card border-dashed">
               <CardContent className="py-20 text-center">
@@ -180,14 +180,14 @@ export function Dashboard({ onNewProject }: DashboardProps) {
                 const progress = calculateProjectProgress(project.id)
                 const projectTasks = tasks.filter(t => t.projectId === project.id)
                 const methodology = METHODOLOGY_INFO[project.methodology]
-                
+
                 return (
-                  <Card 
-                    key={project.id} 
+                  <Card
+                    key={project.id}
                     className="glass-card cursor-pointer hover:border-primary transition-all group hover:-translate-y-1 relative overflow-hidden"
                     onClick={() => selectProject(project.id)}
                   >
-                    <div 
+                    <div
                       className="absolute top-0 left-0 w-1 h-full"
                       style={{ backgroundColor: project.color }}
                     />
@@ -209,24 +209,24 @@ export function Dashboard({ onNewProject }: DashboardProps) {
                       )}
                     </CardHeader>
                     <CardContent>
-                        <div className="flex flex-col gap-3 text-sm">
-                          <div className="flex justify-between items-center text-muted-foreground font-medium">
-                            <span className="flex items-center gap-1.5">
-                              <ListTodo className="h-3.5 w-3.5" />
-                              {projectTasks.length} tarefas
+                      <div className="flex flex-col gap-3 text-sm">
+                        <div className="flex justify-between items-center text-muted-foreground font-medium">
+                          <span className="flex items-center gap-1.5">
+                            <ListTodo className="h-3.5 w-3.5" />
+                            {projectTasks.length} tarefas
+                          </span>
+                          {project.deadline && (
+                            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight">
+                              <Clock className="h-3 w-3" />
+                              {new Date(project.deadline).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                             </span>
-                            {project.deadline && (
-                              <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight">
-                                <Clock className="h-3 w-3" />
-                                {new Date(project.deadline).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Progresso</span>
-                            <span className="font-bold text-foreground">{Math.round(progress)}%</span>
-                          </div>
+                          )}
                         </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Progresso</span>
+                          <span className="font-bold text-foreground">{Math.round(progress)}%</span>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 )

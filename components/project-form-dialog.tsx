@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useProjectStore } from '@/lib/store'
-import { METHODOLOGY_INFO, PROJECT_COLORS, type Methodology } from '@/lib/types'
+import { METHODOLOGY_INFO, PROJECT_COLORS, type Methodology, type KPI } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -15,14 +15,15 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { Check } from 'lucide-react'
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Check, Plus, Trash2 } from 'lucide-react'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+
+const generateId = () => Math.random().toString(36).substring(2, 15)
 
 interface ProjectFormDialogProps {
   open: boolean
@@ -31,18 +32,49 @@ interface ProjectFormDialogProps {
 
 export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps) {
   const { addProject } = useProjectStore()
-  
+
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [deadline, setDeadline] = useState('')
+  const [category, setCategory] = useState('')
   const [methodology, setMethodology] = useState<Methodology>('kanban')
   const [color, setColor] = useState(PROJECT_COLORS[0])
-  const [sprintDuration, setSprintDuration] = useState('2') // Default 2 weeks
-  const [totalSprints, setTotalSprints] = useState('4') // Default 4 sprints
+  const [sprintDuration, setSprintDuration] = useState('2')
+  const [totalSprints, setTotalSprints] = useState('4')
+
+  // Initial KPIs
+  const [kpis, setKpis] = useState<KPI[]>([])
+  const [kpiName, setKpiName] = useState('')
+  const [kpiTarget, setKpiTarget] = useState('')
+  const [kpiUnit, setKpiUnit] = useState('')
+  const [kpiAggregation, setKpiAggregation] = useState<'sum' | 'average'>('sum')
+  const [showKpiInput, setShowKpiInput] = useState(false)
+
+  const startYear = new Date().getFullYear()
+  const endYear = deadline ? new Date(deadline).getFullYear() : startYear
+  const numYears = Math.max(1, endYear - startYear + 1)
+
+  const handleAddKpi = () => {
+    if (!kpiName.trim() || !kpiTarget) return
+    setKpis(prev => [...prev, {
+      id: generateId(),
+      name: kpiName.trim(),
+      target: Number(kpiTarget),
+      current: 0,
+      unit: kpiUnit.trim(),
+      aggregation: kpiAggregation
+    }])
+    setKpiName('')
+    setKpiTarget('')
+    setKpiUnit('')
+    setKpiAggregation('sum')
+    setShowKpiInput(false)
+  }
+
+  const handleRemoveKpi = (id: string) => setKpis(prev => prev.filter(k => k.id !== id))
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
     if (!name.trim()) return
 
     addProject({
@@ -50,12 +82,14 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
       description: description.trim() || undefined,
       methodology,
       color,
+      category: category.trim() || 'geral',
       deadline: deadline ? new Date(deadline) : undefined,
       sprintDuration: methodology === 'scrum' ? Number(sprintDuration) : undefined,
-      totalSprints: methodology === 'scrum' ? Number(totalSprints) : undefined
+      totalSprints: methodology === 'scrum' ? Number(totalSprints) : undefined,
+      generalKpis: kpis,
+      yearlyGoals: undefined as any // store will auto-generate
     })
 
-    // Reset form
     resetForm()
     onOpenChange(false)
   }
@@ -64,10 +98,16 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
     setName('')
     setDescription('')
     setDeadline('')
+    setCategory('')
     setMethodology('kanban')
     setColor(PROJECT_COLORS[0])
     setSprintDuration('2')
     setTotalSprints('4')
+    setKpis([])
+    setKpiName('')
+    setKpiTarget('')
+    setKpiUnit('')
+    setShowKpiInput(false)
   }
 
   return (
@@ -75,172 +115,219 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
       if (!value) resetForm()
       onOpenChange(value)
     }}>
-      <DialogContent className="w-[95vw] sm:max-w-xl glass border-none shadow-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] sm:max-w-2xl glass border-none shadow-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl sm:text-2xl font-black text-gradient">Novo Projeto</DialogTitle>
           <DialogDescription className="text-xs sm:text-sm font-medium text-muted-foreground/80">
-            Crie um novo projeto e escolha a metodologia ágil ideal para seu time.
+            Crie um projeto com metodologia, prazo, categoria e KPIs para acompanhamento de metas anuais.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 mt-2 sm:mt-4">
-          <div className="space-y-3 sm:space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div className="space-y-1.5 sm:space-y-2">
-                <label htmlFor="name" className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground">Nome do Projeto</label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Redesign do App"
-                  className="bg-background/50 border-border/50 focus:border-primary transition-all h-10 sm:h-12 text-sm sm:text-base font-semibold"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5 sm:space-y-2">
-                <label htmlFor="deadline" className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground">Data Final (Prazo)</label>
-                <Input
-                  id="deadline"
-                  type="date"
-                  value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                  className="bg-background/50 border-border/50 focus:border-primary transition-all h-10 sm:h-12 text-sm sm:text-base font-semibold"
-                />
-              </div>
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 mt-2">
+          {/* Row 1: Name + Deadline */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Nome do Projeto *</label>
+              <Input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Ex: Expansão Frota 2026"
+                className="bg-background/50 border-border/50 focus:border-primary h-10 font-semibold"
+                required
+              />
             </div>
-
-            <div className="space-y-1.5 sm:space-y-2">
-              <label htmlFor="description" className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground">Descrição (opcional)</label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Descreva o objetivo do projeto..."
-                className="bg-background/50 border-border/50 focus:border-primary transition-all text-sm font-medium"
-                rows={2}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Data Final (Prazo)</label>
+              <Input
+                type="date"
+                value={deadline}
+                onChange={e => setDeadline(e.target.value)}
+                className="bg-background/50 border-border/50 focus:border-primary h-10 font-semibold"
               />
             </div>
           </div>
 
+          {/* Row 2: Category + Description */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Categoria</label>
+              <Input
+                value={category}
+                onChange={e => setCategory(e.target.value)}
+                placeholder="Ex: Frota, TI, Obras"
+                className="bg-background/50 border-border/50 focus:border-primary h-10 font-semibold"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Descrição (opcional)</label>
+              <Input
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder="Objetivo do projeto..."
+                className="bg-background/50 border-border/50 focus:border-primary h-10 font-semibold"
+              />
+            </div>
+          </div>
+
+          {/* KPI Section */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                KPIs & Metas
+                {deadline && numYears > 1 && (
+                  <span className="ml-2 text-primary normal-case">· {numYears} anos ({startYear}–{endYear})</span>
+                )}
+              </label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 text-xs gap-1 text-primary hover:text-primary hover:bg-primary/10"
+                onClick={() => setShowKpiInput(!showKpiInput)}
+              >
+                <Plus className="h-3 w-3" /> KPI
+              </Button>
+            </div>
+
+            {showKpiInput && (
+              <div className="p-3 rounded-xl bg-secondary/20 border border-border/50 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="Nome do KPI" value={kpiName} onChange={e => setKpiName(e.target.value)} className="h-8 text-xs" />
+                  <Input type="number" placeholder="Meta total" value={kpiTarget} onChange={e => setKpiTarget(e.target.value)} className="h-8 text-xs" />
+                  <Input placeholder="Unidade (R$, %)" value={kpiUnit} onChange={e => setKpiUnit(e.target.value)} className="h-8 text-xs" />
+                  <div className="flex gap-1">
+                    {(['sum', 'average'] as const).map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setKpiAggregation(m)}
+                        className={`flex-1 h-8 rounded-md text-[10px] font-bold border transition-all ${
+                          kpiAggregation === m
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-secondary/30 border-border'
+                        }`}
+                      >
+                        {m === 'sum' ? '∑ Soma' : '⌀ Média'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {kpiName && kpiTarget && numYears > 1 && (
+                  <p className="text-[10px] text-muted-foreground">
+                    {kpiAggregation === 'sum'
+                      ? `→ ~${kpiUnit} ${(Number(kpiTarget) / numYears).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} por ano`
+                      : `→ ${kpiUnit} ${Number(kpiTarget).toLocaleString('pt-BR')} replicado por ano`}
+                  </p>
+                )}
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setShowKpiInput(false)}>Cancelar</Button>
+                  <Button type="button" size="sm" onClick={handleAddKpi} disabled={!kpiName.trim() || !kpiTarget} className="bg-primary h-7 text-xs">
+                    <Check className="h-3 w-3 mr-1" /> Adicionar
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {kpis.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {kpis.map(k => (
+                  <div key={k.id} className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 text-primary rounded-lg px-2 py-1 text-[10px] font-bold">
+                    <span>{k.name}: {k.unit}{k.target.toLocaleString()}</span>
+                    <span className="opacity-50">({k.aggregation === 'sum' ? '∑' : '⌀'})</span>
+                    <button type="button" onClick={() => handleRemoveKpi(k.id)} className="text-destructive/70 hover:text-destructive ml-0.5">
+                      <Trash2 className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Color Picker */}
-          <div className="space-y-2 sm:space-y-3">
-            <label className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground">Identidade Visual</label>
-            <div className="flex flex-wrap gap-2 sm:gap-3">
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Identidade Visual</label>
+            <div className="flex flex-wrap gap-2">
               {PROJECT_COLORS.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setColor(c)}
                   className={cn(
-                    "h-8 w-8 sm:h-10 sm:w-10 rounded-xl sm:rounded-2xl transition-all flex items-center justify-center shadow-lg",
-                    color === c ? "scale-110 ring-4 ring-primary/20" : "hover:scale-105 opacity-80 hover:opacity-100"
+                    "h-8 w-8 sm:h-9 sm:w-9 rounded-xl transition-all flex items-center justify-center shadow-md",
+                    color === c ? "scale-110 ring-4 ring-primary/30" : "hover:scale-105 opacity-80 hover:opacity-100"
                   )}
                   style={{ backgroundColor: c }}
                 >
-                  {color === c && <Check className="h-4 w-4 sm:h-5 sm:w-5 text-white drop-shadow-md" />}
+                  {color === c && <Check className="h-4 w-4 text-white drop-shadow-md" />}
                 </button>
               ))}
             </div>
           </div>
 
           {/* Methodology Selection */}
-          <div className="space-y-2 sm:space-y-3">
-            <label className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground">Metodologia Ágil</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-              {(Object.entries(METHODOLOGY_INFO) as [Methodology, typeof METHODOLOGY_INFO[Methodology]][]).map(
-                ([key, info]) => (
-                  <TooltipProvider key={key} delayDuration={200}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => setMethodology(key)}
-                          className={cn(
-                            "group flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all duration-300 text-left w-full",
-                            methodology === key
-                              ? "border-primary bg-primary/10 shadow-lg shadow-primary/5"
-                              : "border-border/50 bg-secondary/20 hover:border-primary/30 hover:bg-secondary/40"
-                          )}
-                        >
-                          <span className="text-xl sm:text-2xl group-hover:scale-110 transition-transform shrink-0">{info.icon}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className={cn(
-                              "font-bold text-xs sm:text-sm transition-colors",
-                              methodology === key ? "text-primary" : "text-foreground"
-                            )}>
-                              {info.name}
-                            </p>
-                            <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium uppercase tracking-tight line-clamp-1 mt-0.5">
-                              {info.description}
-                            </p>
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Metodologia Ágil</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {(Object.entries(METHODOLOGY_INFO) as [Methodology, typeof METHODOLOGY_INFO[Methodology]][]).map(([key, info]) => (
+                <TooltipProvider key={key} delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => setMethodology(key)}
+                        className={cn(
+                          "group flex items-start gap-2 p-3 rounded-xl border transition-all text-left w-full",
+                          methodology === key
+                            ? "border-primary bg-primary/10 shadow-md shadow-primary/5"
+                            : "border-border/50 bg-secondary/20 hover:border-primary/30"
+                        )}
+                      >
+                        <span className="text-xl group-hover:scale-110 transition-transform shrink-0">{info.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className={cn("font-bold text-xs transition-colors", methodology === key ? "text-primary" : "text-foreground")}>{info.name}</p>
+                          <p className="text-[9px] text-muted-foreground uppercase tracking-tight line-clamp-1 mt-0.5">{info.description}</p>
+                        </div>
+                        {methodology === key && (
+                          <div className="h-4 w-4 rounded-full bg-primary flex items-center justify-center shrink-0">
+                            <Check className="h-2.5 w-2.5 text-white" />
                           </div>
-                          {methodology === key && (
-                            <div className="h-4 w-4 sm:h-5 sm:w-5 rounded-full bg-primary flex items-center justify-center animate-in-fade shrink-0">
-                              <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white" />
-                            </div>
-                          )}
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" className="max-w-xs p-4 glass border-none shadow-2xl hidden sm:block">
-                        <p className="font-bold text-sm text-foreground mb-1">{info.icon} {info.name}</p>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          {info.longDescription}
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )
-              )}
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-xs p-4 glass border-none shadow-2xl hidden sm:block">
+                      <p className="font-bold text-sm mb-1">{info.icon} {info.name}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{info.longDescription}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ))}
             </div>
           </div>
 
-          {/* Scrum Specific Settings */}
           {methodology === 'scrum' && (
-            <div className="p-3 sm:p-4 rounded-2xl bg-primary/5 border border-primary/20 animate-in fade-in slide-in-from-top-2 duration-300">
-              <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-primary mb-3">Configurações de Sprint</p>
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div className="space-y-1.5 sm:space-y-2">
-                  <label htmlFor="sprintDuration" className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">Duração (Semanas)</label>
-                  <Input
-                    id="sprintDuration"
-                    type="number"
-                    min="1"
-                    max="8"
-                    value={sprintDuration}
-                    onChange={(e) => setSprintDuration(e.target.value)}
-                    className="bg-background/50 border-border/50 focus:border-primary transition-all h-9 sm:h-10 text-xs sm:text-sm font-semibold"
-                  />
+            <div className="p-3 rounded-2xl bg-primary/5 border border-primary/20">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-3">Configurações de Sprint</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-muted-foreground uppercase">Duração (Semanas)</label>
+                  <Input type="number" min="1" max="8" value={sprintDuration} onChange={e => setSprintDuration(e.target.value)} className="bg-background/50 border-border/50 h-9 text-sm font-semibold" />
                 </div>
-                <div className="space-y-1.5 sm:space-y-2">
-                  <label htmlFor="totalSprints" className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">Total de Sprints</label>
-                  <Input
-                    id="totalSprints"
-                    type="number"
-                    min="1"
-                    max="52"
-                    value={totalSprints}
-                    onChange={(e) => setTotalSprints(e.target.value)}
-                    className="bg-background/50 border-border/50 focus:border-primary transition-all h-9 sm:h-10 text-xs sm:text-sm font-semibold"
-                  />
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-muted-foreground uppercase">Total de Sprints</label>
+                  <Input type="number" min="1" max="52" value={totalSprints} onChange={e => setTotalSprints(e.target.value)} className="bg-background/50 border-border/50 h-9 text-sm font-semibold" />
                 </div>
               </div>
             </div>
           )}
 
-          <DialogFooter className="flex-row gap-2 sm:gap-0 pt-2 border-t border-border/20 mt-2">
-            <Button 
-              type="button" 
-              variant="ghost" 
-              onClick={() => onOpenChange(false)}
-              className="flex-1 sm:flex-none font-bold text-muted-foreground h-10 sm:h-11"
-            >
+          <DialogFooter className="flex-row gap-2 pt-2 border-t border-border/20">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="flex-1 sm:flex-none font-bold text-muted-foreground">
               Cancelar
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={!name.trim()}
-              className="flex-1 sm:flex-none bg-primary hover:bg-primary/90 text-primary-foreground font-black px-4 sm:px-8 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 h-10 sm:h-11"
+              className="flex-1 sm:flex-none bg-primary hover:bg-primary/90 text-primary-foreground font-black px-6 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105"
             >
               Criar Projeto
             </Button>
@@ -248,6 +335,5 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
         </form>
       </DialogContent>
     </Dialog>
-
   )
 }

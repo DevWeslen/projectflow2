@@ -2,6 +2,35 @@ export type Methodology = 'scrum' | 'kanban' | 'xp' | 'lean' | 'waterfall'
 
 export type TaskStatus = 'todo' | 'in-progress' | 'review' | 'done'
 
+export type UserRole = 'admin' | 'gerencia' | 'conselho' | 'operador'
+
+export interface User {
+  id: string
+  name: string
+  username: string
+  role: UserRole
+  password?: string
+}
+
+export type AGGREGATION_MODE = 'sum' | 'average'
+
+export interface KPI {
+  id: string
+  name: string
+  target: number
+  current: number
+  unit: string
+  aggregation: AGGREGATION_MODE
+}
+
+export interface YearlyGoal {
+  id: string
+  year: number
+  startDate: Date
+  endDate: Date
+  kpis: KPI[]
+}
+
 export interface Task {
   id: string
   title: string
@@ -25,6 +54,9 @@ export interface Project {
   color: string
   createdAt: Date
   updatedAt: Date
+  category: string
+  generalKpis: KPI[]
+  yearlyGoals: YearlyGoal[]
   deadline?: Date
   // Scrum specific settings
   sprintDuration?: number // in weeks
