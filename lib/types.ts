@@ -13,6 +13,7 @@ export interface User {
 }
 
 export type AGGREGATION_MODE = 'sum' | 'average'
+export type DISTRIBUTION_MODE = 'fraction' | 'global'
 
 export interface KPI {
   id: string
@@ -21,6 +22,7 @@ export interface KPI {
   current: number
   unit: string
   aggregation: AGGREGATION_MODE
+  distribution?: DISTRIBUTION_MODE
 }
 
 export interface YearlyGoal {

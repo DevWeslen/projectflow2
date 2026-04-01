@@ -48,6 +48,7 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
   const [kpiTarget, setKpiTarget] = useState('')
   const [kpiUnit, setKpiUnit] = useState('')
   const [kpiAggregation, setKpiAggregation] = useState<'sum' | 'average'>('sum')
+  const [kpiDistribution, setKpiDistribution] = useState<'fraction' | 'global'>('fraction')
   const [showKpiInput, setShowKpiInput] = useState(false)
 
   const startYear = new Date().getFullYear()
@@ -62,12 +63,14 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
       target: Number(kpiTarget),
       current: 0,
       unit: kpiUnit.trim(),
-      aggregation: kpiAggregation
+      aggregation: kpiAggregation,
+      distribution: kpiDistribution
     }])
     setKpiName('')
     setKpiTarget('')
     setKpiUnit('')
     setKpiAggregation('sum')
+    setKpiDistribution('fraction')
     setShowKpiInput(false)
   }
 
@@ -107,6 +110,8 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
     setKpiName('')
     setKpiTarget('')
     setKpiUnit('')
+    setKpiAggregation('sum')
+    setKpiDistribution('fraction')
     setShowKpiInput(false)
   }
 
@@ -192,31 +197,38 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
             {showKpiInput && (
               <div className="p-3 rounded-xl bg-secondary/20 border border-border/50 space-y-2">
                 <div className="grid grid-cols-2 gap-2">
-                  <Input placeholder="Nome do KPI" value={kpiName} onChange={e => setKpiName(e.target.value)} className="h-8 text-xs" />
-                  <Input type="number" placeholder="Meta total" value={kpiTarget} onChange={e => setKpiTarget(e.target.value)} className="h-8 text-xs" />
-                  <Input placeholder="Unidade (R$, %)" value={kpiUnit} onChange={e => setKpiUnit(e.target.value)} className="h-8 text-xs" />
-                  <div className="flex gap-1">
-                    {(['sum', 'average'] as const).map(m => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setKpiAggregation(m)}
-                        className={`flex-1 h-8 rounded-md text-[10px] font-bold border transition-all ${
-                          kpiAggregation === m
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-secondary/30 border-border'
-                        }`}
-                      >
-                        {m === 'sum' ? '∑ Soma' : '⌀ Média'}
-                      </button>
-                    ))}
+                  <Input placeholder="Nome do Indicador" value={kpiName} onChange={e => setKpiName(e.target.value)} className="h-8 text-xs font-bold" />
+                  <Input type="number" placeholder="Meta Total" value={kpiTarget} onChange={e => setKpiTarget(e.target.value)} className="h-8 text-xs font-bold" />
+                  
+                  <div className="col-span-2 grid grid-cols-3 gap-2 items-end">
+                    <Input placeholder="Unid. Medida (ex: R$/KM, %)" value={kpiUnit} onChange={e => setKpiUnit(e.target.value)} className="h-8 text-xs font-bold" />
+                    
+                    <div className="flex flex-col gap-1">
+                      <div className="flex gap-1 h-8">
+                        {(['sum', 'average'] as const).map(m => (
+                          <button key={m} type="button" onClick={() => setKpiAggregation(m)} className={`flex-1 h-8 rounded-md text-[10px] uppercase font-black tracking-tighter border transition-all ${kpiAggregation === m ? 'bg-primary text-primary-foreground border-primary' : 'bg-secondary/30 border-border text-muted-foreground'}`}>
+                            {m === 'sum' ? '∑ Soma' : '⌀ Média'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <div className="flex gap-1 h-8">
+                        {(['fraction', 'global'] as const).map(d => (
+                          <button key={d} type="button" onClick={() => setKpiDistribution(d)} className={`flex-1 h-8 rounded-md text-[10px] uppercase font-black tracking-tighter border transition-all ${kpiDistribution === d ? 'bg-primary text-primary-foreground border-primary' : 'bg-secondary/30 border-border text-muted-foreground'}`}>
+                            {d === 'fraction' ? '÷ Fração' : '∞ Global'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
                 {kpiName && kpiTarget && numYears > 1 && (
-                  <p className="text-[10px] text-muted-foreground">
-                    {kpiAggregation === 'sum'
-                      ? `→ ~${kpiUnit} ${(Number(kpiTarget) / numYears).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} por ano`
-                      : `→ ${kpiUnit} ${Number(kpiTarget).toLocaleString('pt-BR')} replicado por ano`}
+                  <p className="text-[10px] text-muted-foreground font-bold">
+                    {kpiDistribution === 'fraction'
+                      ? `→ O sistema vai dividir ~ ${(Number(kpiTarget) / numYears).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} por ano.`
+                      : `→ O sistema vai repetir a meta de ${Number(kpiTarget).toLocaleString('pt-BR')} em todos os anos.`}
                   </p>
                 )}
                 <div className="flex justify-end gap-2">

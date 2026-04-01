@@ -27,7 +27,7 @@ export default function Home() {
   return (
     <SidebarProvider>
       <AppSidebar onNewProject={() => setProjectDialogOpen(true)} />
-      <SidebarInset className="flex flex-col min-h-screen bg-background">
+      <SidebarInset className="flex flex-col min-w-0 min-h-screen bg-background">
         {activeView === 'users' ? (
           <UserManagement />
         ) : activeView === 'consolidated' ? (

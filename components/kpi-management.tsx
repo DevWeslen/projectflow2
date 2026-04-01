@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Target, TrendingUp, Plus, Edit2, Check, X, Calendar, Trash2, RefreshCw, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -22,6 +23,7 @@ interface EditingKpi {
   target: string
   unit: string
   aggregation: 'sum' | 'average'
+  distribution: 'fraction' | 'global'
 }
 
 export function KpiManagement({ projectId }: KpiManagementProps) {
@@ -36,6 +38,9 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
 
   // ── General KPI editing ────────────────────────────────────
   const [editingGeneral, setEditingGeneral] = useState<EditingKpi | null>(null)
+  
+  // ── Year Deletion ──────────────────────────────────────────
+  const [deleteYearConfirm, setDeleteYearConfirm] = useState<string | null>(null)
 
   // ── New KPI form ───────────────────────────────────────────
   const [showKpiForm, setShowKpiForm] = useState(false)
@@ -43,6 +48,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
   const [newKpiTarget, setNewKpiTarget] = useState('')
   const [newKpiUnit, setNewKpiUnit] = useState('')
   const [newKpiAggregation, setNewKpiAggregation] = useState<'sum' | 'average'>('sum')
+  const [newKpiDistribution, setNewKpiDistribution] = useState<'fraction' | 'global'>('fraction')
 
   if (!project) return null
 
@@ -65,7 +71,8 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
       target: totalTarget,
       current: 0,
       unit: newKpiUnit.trim() || '',
-      aggregation: newKpiAggregation
+      aggregation: newKpiAggregation,
+      distribution: newKpiDistribution
     }
     const updatedKpis = [...kpis, newKpi]
     const updatedGoals = yearlyGoals.map(yg => ({
@@ -73,11 +80,11 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
       kpis: [...yg.kpis.filter(k => k.id !== newKpi.id), {
         ...newKpi,
         current: 0,
-        target: newKpiAggregation === 'sum' ? Math.round((totalTarget / numYears) * 100) / 100 : totalTarget
+        target: newKpiDistribution === 'fraction' ? Math.round((totalTarget / numYears) * 100) / 100 : totalTarget
       }]
     }))
     updateProject(projectId, { generalKpis: updatedKpis, yearlyGoals: updatedGoals })
-    setNewKpiName(''); setNewKpiTarget(''); setNewKpiUnit(''); setNewKpiAggregation('sum')
+    setNewKpiName(''); setNewKpiTarget(''); setNewKpiUnit(''); setNewKpiAggregation('sum'); setNewKpiDistribution('fraction')
     setShowKpiForm(false)
   }
 
@@ -93,13 +100,13 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
     if (!editingGeneral) return
     const newTarget = Number(editingGeneral.target)
     const updatedKpis = kpis.map(k => k.id === editingGeneral.id
-      ? { ...k, name: editingGeneral.name, target: newTarget, unit: editingGeneral.unit, aggregation: editingGeneral.aggregation }
+      ? { ...k, name: editingGeneral.name, target: newTarget, unit: editingGeneral.unit, aggregation: editingGeneral.aggregation, distribution: editingGeneral.distribution }
       : k
     )
     const updatedGoals = yearlyGoals.map(yg => ({
       ...yg,
       kpis: yg.kpis.map(k => k.id === editingGeneral.id
-        ? { ...k, name: editingGeneral.name, unit: editingGeneral.unit, aggregation: editingGeneral.aggregation }
+        ? { ...k, name: editingGeneral.name, unit: editingGeneral.unit, aggregation: editingGeneral.aggregation, distribution: editingGeneral.distribution }
         : k
       )
     }))
@@ -110,7 +117,8 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
   const handleRedistribute = (kpiId: string) => {
     const baseKpi = kpis.find(k => k.id === kpiId)
     if (!baseKpi) return
-    const perYear = baseKpi.aggregation === 'sum'
+    const isFraction = baseKpi.distribution === 'fraction' || (!baseKpi.distribution && baseKpi.aggregation === 'sum')
+    const perYear = isFraction
       ? Math.round((baseKpi.target / numYears) * 100) / 100
       : baseKpi.target
     const updatedGoals = yearlyGoals.map(yg => ({
@@ -168,13 +176,68 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
       year: newYear,
       startDate: new Date(newYear, 0, 1),
       endDate: new Date(newYear, 11, 31),
-      kpis: kpis.map(k => ({
-        ...k, current: 0,
-        target: k.aggregation === 'sum' ? Math.round((k.target / (numYears + 1)) * 100) / 100 : k.target
-      }))
+      kpis: kpis.map(k => {
+        const isFraction = k.distribution === 'fraction' || (!k.distribution && k.aggregation === 'sum')
+        return {
+          ...k, current: 0,
+          target: isFraction ? Math.round((k.target / (numYears + 1)) * 100) / 100 : k.target
+        }
+      })
     }]
     updateProject(projectId, { yearlyGoals: newGoals })
   }
+
+  const handleDeleteYear = (yearId: string) => {
+    if (yearlyGoals.length <= 1) {
+      alert("O projeto não pode ficar sem detalhamento anual. Pelo menos um ano deve existir.")
+      return
+    }
+    setDeleteYearConfirm(yearId)
+  }
+
+  const confirmDeleteYear = (redistribute: boolean) => {
+    if (!deleteYearConfirm) return
+    const yearId = deleteYearConfirm
+
+    const remainingGoals = yearlyGoals.filter(yg => yg.id !== yearId)
+    const newNumYears = remainingGoals.length
+    
+    // Redistribute fraction targets across remaining years if user chose YES
+    const updatedGoals = remainingGoals.map(yg => {
+      if (!redistribute) return yg
+      
+      return {
+        ...yg,
+        kpis: yg.kpis.map(yKpi => {
+          const baseKpi = kpis.find(k => k.id === yKpi.id)
+          if (!baseKpi) return yKpi
+          const isFraction = baseKpi.distribution === 'fraction' || (!baseKpi.distribution && baseKpi.aggregation === 'sum')
+          if (isFraction) {
+            return { ...yKpi, target: Math.round((baseKpi.target / newNumYears) * 100) / 100 }
+          }
+          return yKpi
+        })
+      }
+    })
+    
+    // Update general KPIs based on the new yearly totals
+    const updatedGeneralKpis = kpis.map(k => {
+      let newCurrent = 0, newTarget = 0, validYears = 0
+      updatedGoals.forEach(g => {
+        const gk = g.kpis.find(x => x.id === k.id)
+        if (gk) { newCurrent += gk.current; newTarget += gk.target; validYears++ }
+      })
+      if (k.aggregation === 'average' && validYears > 0) {
+        return { ...k, current: newCurrent / validYears, target: newTarget / validYears }
+      }
+      return { ...k, current: newCurrent, target: newTarget }
+    })
+    
+    updateProject(projectId, { yearlyGoals: updatedGoals, generalKpis: updatedGeneralKpis })
+    setDeleteYearConfirm(null)
+  }
+
+  const isFractionKpiPresent = kpis.some(k => k.distribution === 'fraction' || (!k.distribution && k.aggregation === 'sum'))
 
   const yearRange = yearlyGoals.length >= 2
     ? `${yearlyGoals[0].year} – ${yearlyGoals[yearlyGoals.length - 1].year}`
@@ -227,17 +290,28 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                 <label className="text-[11px] font-black uppercase tracking-widest text-slate-500">Meta Total Global</label>
                 <Input type="number" placeholder="Ex: 5000" value={newKpiTarget} onChange={e => setNewKpiTarget(e.target.value)} className="h-11 rounded-lg border-slate-200" />
               </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500">Unidade (Opcional)</label>
-                <Input placeholder="Ex: un, %, R$" value={newKpiUnit} onChange={e => setNewKpiUnit(e.target.value)} className="h-11 rounded-lg border-slate-200" />
+              <div className="space-y-2 col-span-1 md:col-span-2">
+                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500">Unid. Medida (ex: R$/KM, %)</label>
+                <Input placeholder="Unidade de medida" value={newKpiUnit} onChange={e => setNewKpiUnit(e.target.value)} className="h-11 rounded-lg border-slate-200" />
               </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500">Regra de Divisão</label>
+              <div className="space-y-2 col-span-1 md:col-span-2">
+                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500">Cálculo (Painel Geral)</label>
                 <div className="flex gap-2 h-11">
                   {(['sum', 'average'] as const).map(m => (
                     <button key={m} onClick={() => setNewKpiAggregation(m)}
                       className={`flex-1 rounded-lg text-xs font-black transition-all border-2 ${newKpiAggregation === m ? 'bg-[#006838]/10 text-[#006838] border-[#006838]' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
-                      {m === 'sum' ? '∑ Fração' : '⌀ Global'}
+                      {m === 'sum' ? '∑ Soma' : '⌀ Média'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2 col-span-1 md:col-span-4 mt-2">
+                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500">Distribuição da Meta (Anos)</label>
+                <div className="flex gap-2 h-11">
+                  {(['fraction', 'global'] as const).map(d => (
+                    <button key={d} onClick={() => setNewKpiDistribution(d)}
+                      className={`flex-1 flex items-center justify-center gap-2 rounded-lg text-xs font-black transition-all border-2 ${newKpiDistribution === d ? 'bg-[#006838] text-white border-[#006838] shadow-md' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                      {d === 'fraction' ? '÷ Fração (Dividir)' : '∞ Global (Repetir)'}
                     </button>
                   ))}
                 </div>
@@ -245,17 +319,17 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
             </div>
             
             {newKpiName && newKpiTarget && numYears > 1 && (
-              <div className="bg-slate-50 rounded-xl p-4 border flex items-start gap-3">
+              <div className="bg-slate-50 rounded-xl p-4 border flex items-start gap-3 mt-4">
                 <div className="bg-blue-100 text-blue-700 p-1.5 rounded-md mt-0.5"><TrendingUp className="w-4 h-4" /></div>
                 <div>
                   <h4 className="font-bold text-slate-900 text-sm">Projeção da Meta</h4>
                   <p className="text-sm text-slate-600 mt-0.5">
-                    {newKpiAggregation === 'sum'
+                    {newKpiDistribution === 'fraction'
                       ? `Meta total dividida pelos ${numYears} anos de projeto: Aprox. `
                       : `A mesma meta se aplica a todos os ${numYears} anos: Exatamente `}
                     <strong className="text-slate-900 bg-white px-2 py-0.5 rounded border ml-1 shadow-sm">
-                      {newKpiAggregation === 'sum' 
-                        ? `${newKpiUnit} ${(Number(newKpiTarget) / numYears).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}` 
+                      {newKpiDistribution === 'fraction' 
+                        ? `${newKpiUnit} ${(Number(newKpiTarget) / numYears).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}` 
                         : `${newKpiUnit} ${Number(newKpiTarget).toLocaleString()}`} por ano
                     </strong>
                   </p>
@@ -298,8 +372,8 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                         <button onClick={() => setEditingGeneral(null)} className="hover:bg-white/20 p-1 rounded-md transition-colors"><X className="w-4 h-4"/></button>
                       </div>
                       <CardContent className="p-5 space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-1.5 hover:bg-slate-50 p-2 rounded-lg transition-colors border border-transparent hover:border-slate-100">
                             <label className="text-[10px] font-bold text-slate-500 uppercase">Nome</label>
                             <Input value={editingGeneral.name} onChange={e => setEditingGeneral({ ...editingGeneral, name: e.target.value })} className="h-9 font-bold" />
                           </div>
@@ -311,13 +385,24 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                             <label className="text-[10px] font-bold text-slate-500 uppercase">Apresentação</label>
                             <Input value={editingGeneral.unit} onChange={e => setEditingGeneral({ ...editingGeneral, unit: e.target.value })} className="h-9" placeholder="R$, %, Qtde..." />
                           </div>
-                          <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase">Modo de Cálculo</label>
+                          <div className="space-y-1.5 col-span-2">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase">Cálculo no Painel Consolidado</label>
                             <div className="flex gap-1">
                               {(['sum', 'average'] as const).map(m => (
                                 <button key={m} onClick={() => setEditingGeneral({ ...editingGeneral, aggregation: m })}
                                   className={`flex-1 h-9 rounded-md text-[10px] font-black transition-all ${editingGeneral.aggregation === m ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                                  {m === 'sum' ? 'Soma' : 'Média'}
+                                  {m === 'sum' ? '∑ Soma Geral' : '⌀ Tirar Média'}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="space-y-1.5 col-span-2">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase">Distribuição da Meta Anual</label>
+                            <div className="flex gap-1">
+                              {(['fraction', 'global'] as const).map(d => (
+                                <button key={d} onClick={() => setEditingGeneral({ ...editingGeneral, distribution: d })}
+                                  className={`flex-1 h-9 rounded-md text-[10px] font-black transition-all ${editingGeneral.distribution === d ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                                  {d === 'fraction' ? '÷ Fração (Dividir)' : '∞ Global (Repetir)'}
                                 </button>
                               ))}
                             </div>
@@ -354,7 +439,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                         
                         {/* Action buttons (fade in on hover) */}
                         <div className="absolute top-4 right-4 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 backdrop-blur-md rounded-xl p-1 border border-white/10 shadow-2xl">
-                          <button onClick={() => setEditingGeneral({ id: kpi.id, name: kpi.name, target: kpi.target.toString(), unit: kpi.unit, aggregation: kpi.aggregation })} className="p-1.5 hover:bg-white/20 rounded-lg text-white/90 hover:text-white transition-colors" title="Editar">
+                          <button onClick={() => setEditingGeneral({ id: kpi.id, name: kpi.name, target: kpi.target.toString(), unit: kpi.unit, aggregation: kpi.aggregation, distribution: kpi.distribution || (kpi.aggregation === 'sum' ? 'fraction' : 'global') })} className="p-1.5 hover:bg-white/20 rounded-lg text-white/90 hover:text-white transition-colors" title="Editar">
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button onClick={() => handleRedistribute(kpi.id)} className="p-1.5 hover:bg-white/20 rounded-lg text-white/90 hover:text-white transition-colors" title="Repartir meta nos anos">
@@ -416,7 +501,12 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                          {fmtDate(yearGoal.startDate)} → {fmtDate(yearGoal.endDate)}
                       </p>
                     </div>
-                    <Badge variant="outline" className="bg-white font-bold">{yearGoal.kpis.length} KPIs</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="bg-white font-bold text-[10px]">{yearGoal.kpis.length} KPIs</Badge>
+                      <button onClick={() => handleDeleteYear(yearGoal.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100" title="Excluir Ano">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                   
                   <CardContent className="p-0">
@@ -440,7 +530,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                               <p className="text-xs font-bold text-slate-700 uppercase tracking-widest">{baseKpi.name}</p>
                             </div>
                             
-                            <div className="flex items-center gap-4">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
                               {/* Realizado */}
                               <div className="flex-1 bg-white border border-slate-200 rounded-xl p-2 pb-1.5 group/edit relative cursor-pointer hover:border-slate-300 transition-colors shadow-sm"
                                 onClick={() => !isEditCurrent && startEditing(yIdx, yKpi, 'current')}>
@@ -520,6 +610,44 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
             Comece configurando os grandes objetivos do projeto. As metas serão repartidas automaticamente ano a ano.
           </p>
         </Card>
+      )}
+
+      {/* Pop-up estilizado para Exclusão de Ano */}
+      {deleteYearConfirm && (
+        <Dialog open={!!deleteYearConfirm} onOpenChange={(open) => !open && setDeleteYearConfirm(null)}>
+          <DialogContent className="sm:max-w-lg bg-white border-slate-200 p-6 w-[95vw] max-h-[90vh] overflow-y-auto rounded-[32px]">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-black text-slate-900 border-b pb-4">Excluir Detalhamento Anual</DialogTitle>
+              <DialogDescription className="text-sm font-medium text-slate-500 pt-4 flex flex-col gap-4 text-left">
+                <span className="text-base text-slate-700">Você está prestes a excluir um ano inteiro deste projeto.</span>
+                {isFractionKpiPresent && (
+                  <span className="bg-amber-50 text-amber-700 p-4 rounded-xl border border-amber-200 text-sm leading-relaxed shadow-sm">
+                    Deseja que o sistema <strong>redistribua automaticamente</strong> as metas do tipo "Fração" (que estavam alocadas neste ano) para os anos restantes, a fim de manter a meta global original intacta?
+                  </span>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-3 w-full mt-6">
+              {isFractionKpiPresent ? (
+                <>
+                  <Button onClick={() => confirmDeleteYear(true)} className="w-full font-black bg-[#006838] text-white hover:bg-[#00522a] shadow-lg h-14 text-sm rounded-xl">
+                    Sim, Excluir e Redistribuir Metas
+                  </Button>
+                  <Button variant="outline" onClick={() => confirmDeleteYear(false)} className="w-full font-black border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 hover:border-red-300 h-14 text-sm rounded-xl shadow-sm">
+                    Excluir Sem Redistribuir
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => confirmDeleteYear(false)} className="w-full font-black bg-red-600 text-white hover:bg-red-700 shadow-lg h-14 text-sm rounded-xl">
+                  Confirmar Exclusão
+                </Button>
+              )}
+              <Button variant="ghost" onClick={() => setDeleteYearConfirm(null)} className="w-full font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-100 h-12 text-sm rounded-xl mt-2">
+                Cancelar e Voltar
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )

@@ -23,10 +23,10 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 }
 
 function StatusPill({ pct }: { pct: number }) {
-  const color = pct >= 80 ? 'bg-green-500' : pct >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+  const color = pct >= 100 ? 'text-emerald-500 bg-emerald-500/10 ring-emerald-500/20' : pct >= 50 ? 'text-amber-500 bg-amber-500/10 ring-amber-500/20' : 'text-rose-500 bg-rose-500/10 ring-rose-500/20'
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-white text-[10px] font-black ${color}`}>
-      {pct >= 80 ? <CheckCircle2 className="w-2.5 h-2.5" /> : pct >= 50 ? <Clock className="w-2.5 h-2.5" /> : <AlertTriangle className="w-2.5 h-2.5" />}
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest ring-1 ring-inset ${color}`}>
+      {pct >= 100 ? <CheckCircle2 className="w-3 h-3" /> : pct >= 50 ? <Clock className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
       {pct.toFixed(0)}%
     </span>
   )
@@ -79,134 +79,116 @@ export function ConsolidatedDashboard() {
   const now = new Date()
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
+    <div className="flex flex-col flex-1 min-w-0 w-full min-h-screen bg-zinc-50/50 font-sans selection:bg-emerald-500/20">
       {/* Header */}
-      <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-white px-6 shadow-sm">
-        <LogoPrincesa className="h-8 w-auto" />
-        <div className="h-6 w-px bg-slate-200 mx-2" />
-        <div className="flex items-center gap-2 font-bold text-slate-900">
-          <BarChart3 className="w-5 h-5 text-[#006838]" />
-          <span>Painel Estratégico Consolidado</span>
+      <header className="sticky top-0 z-40 flex h-[64px] items-center gap-3 sm:gap-4 border-b border-zinc-200/50 bg-white/70 backdrop-blur-xl px-4 sm:px-6">
+        <LogoPrincesa className="h-6 sm:h-7 w-auto shrink-0" />
+        <div className="hidden sm:block h-4 w-px bg-zinc-300 mx-2" />
+        <div className="hidden sm:flex items-center gap-2 font-medium text-zinc-900 text-sm">
+          <span>Painel Estratégico</span>
         </div>
-        <div className="ml-auto flex items-center gap-4">
-          <div className="flex flex-col items-end pr-4 border-r">
-            <span className="text-sm font-bold text-slate-900">{user?.name}</span>
-            <span className="text-[10px] text-slate-500 uppercase font-black">{user?.role}</span>
+        <div className="ml-auto flex items-center gap-3 sm:gap-5">
+          <div className="hidden sm:flex flex-col items-end pr-5 border-r border-zinc-200">
+            <span className="text-xs font-semibold text-zinc-900 tracking-tight">{user?.name}</span>
+            <span className="text-[9px] text-zinc-400 uppercase tracking-widest font-bold">{user?.role}</span>
           </div>
-          <Button variant="ghost" size="sm" className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => logout()}>
-            <LogOut className="w-4 h-4" /> Sair
+          <Button variant="ghost" size="sm" className="h-8 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-full px-3 sm:px-4 text-xs font-semibold" onClick={() => logout()}>
+            Sair
           </Button>
         </div>
       </header>
 
-      <main className="flex-1 p-6 lg:p-8 space-y-8 max-w-7xl mx-auto w-full">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Visão Geral da Organização</h1>
-          <p className="text-slate-500 font-medium">Consolidação automática de KPIs e metas estratégicas. Atualizado: {now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+      <main className="flex-1 p-6 lg:p-10 space-y-10 w-full min-w-0">
+        <div>
+          <h1 className="text-4xl font-black tracking-tighter text-zinc-900 leading-tight">Visão Global</h1>
+          <p className="text-sm font-medium text-zinc-500 mt-2">Consolidação automática de métricas. Atualizado em {now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}.</p>
         </div>
 
         {/* ── Top KPI summary cards ────────────────────────────── */}
         <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
           {[
-            { label: 'Projetos Ativos', value: projects.length, sub: `${byCategory ? Object.keys(byCategory).length : 0} categorias`, color: 'text-[#006838]', icon: <FolderKanban className="w-5 h-5" /> },
-            { label: 'Tarefas Concluídas', value: `${doneTasks}/${totalTasks}`, sub: `${totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0}% do total`, color: 'text-green-600', icon: <CheckCircle2 className="w-5 h-5" /> },
-            { label: 'Em Andamento', value: inProgressTasks, sub: 'tarefas abertas agora', color: 'text-yellow-600', icon: <Clock className="w-5 h-5" /> },
-            { label: 'KPIs Rastreados', value: totalKpis, sub: `${kpiNames.length} indicadores únicos`, color: 'text-purple-600', icon: <Calculator className="w-5 h-5" /> },
+            { label: 'Projetos Ativos', value: projects.length, sub: `${byCategory ? Object.keys(byCategory).length : 0} categorias`, color: 'text-[#006838]', bg: 'bg-[#006838]/10 text-[#006838]', icon: <FolderKanban className="w-5 h-5" /> },
+            { label: 'Tarefas Concluídas', value: `${doneTasks}/${totalTasks}`, sub: `${totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0}% do total`, color: 'text-emerald-600', bg: 'bg-emerald-100 text-emerald-600', icon: <CheckCircle2 className="w-5 h-5" /> },
+            { label: 'Em Andamento', value: inProgressTasks, sub: 'tarefas em fluxo', color: 'text-amber-600', bg: 'bg-amber-100 text-amber-600', icon: <Clock className="w-5 h-5" /> },
+            { label: 'KPIs Analisados', value: totalKpis, sub: `${kpiNames.length} métricas ativas`, color: 'text-blue-600', bg: 'bg-blue-100 text-blue-600', icon: <Calculator className="w-5 h-5" /> },
           ].map(c => (
-            <Card key={c.label} className="border-none shadow-md bg-white">
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div className={cn('p-2 rounded-xl bg-slate-100', c.color)}>{c.icon}</div>
-                </div>
-                <p className={cn('text-2xl font-black', c.color)}>{c.value}</p>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">{c.label}</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">{c.sub}</p>
-              </CardContent>
-            </Card>
+            <div key={c.label} className="border border-slate-200 bg-white rounded-[24px] p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <div className={cn('p-2.5 rounded-xl', c.bg)}>{c.icon}</div>
+              </div>
+              <p className={cn('text-4xl font-black tracking-tighter mt-4', c.color)}>{c.value}</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mt-1">{c.label}</p>
+              <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{c.sub}</p>
+            </div>
           ))}
         </div>
 
         {/* ── Financial progress + project list ───────────────── */}
-        <div className="grid gap-6 md:grid-cols-3">
-          <Card className="md:col-span-2 border-none shadow-md overflow-hidden bg-white">
-            <div className="flex flex-col sm:flex-row">
-              <div className="p-8 bg-[#006838] text-white sm:w-1/3 flex flex-col justify-center items-center text-center">
-                <Target className="w-10 h-10 mb-4 opacity-50" />
-                <div className="text-5xl font-black mb-1">{globalPct}%</div>
-                <div className="text-xs font-bold uppercase tracking-widest opacity-80">Atingimento Financeiro</div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="md:col-span-2 relative overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm p-8 flex flex-col md:flex-row gap-8">
+            <div className="flex flex-col justify-between z-10 w-full md:w-1/3">
+              <div>
+                <div className="p-3 bg-emerald-50 rounded-2xl w-max mb-6">
+                  <Activity className="w-6 h-6 text-[#006838]" />
+                </div>
+                <div className="text-6xl font-black tracking-tighter text-slate-900">{globalPct}%</div>
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mt-2">Progresso Financeiro</div>
               </div>
-              <div className="p-6 flex-1 space-y-4">
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Meta Total (R$)</p>
-                    <p className="text-xl font-black text-slate-900">R$ {(globalTarget / 1e6).toFixed(1)}M</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Realizado (R$)</p>
-                    <p className="text-xl font-black text-[#006838]">R$ {(globalCurrent / 1e6).toFixed(1)}M</p>
-                  </div>
+            </div>
+            
+            <div className="flex-1 flex flex-col justify-center space-y-6 z-10 border-t md:border-t-0 md:border-l border-slate-100 pt-6 md:pt-0 md:pl-8">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Meta Total</p>
+                  <p className="text-3xl font-black tracking-tighter text-slate-900 mt-1">R$ {(globalTarget / 1e6).toFixed(1)}M</p>
                 </div>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs font-bold text-slate-400">
-                    <span>PROGRESSO FINANCEIRO CONSOLIDADO</span>
-                    <span>{globalPct}%</span>
-                  </div>
-                  <Progress value={globalPct} className="h-2.5" />
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Realizado</p>
+                  <p className="text-3xl font-black tracking-tighter text-[#006838] mt-1">R$ {(globalCurrent / 1e6).toFixed(1)}M</p>
                 </div>
-                <div className="grid grid-cols-3 gap-4 pt-2 border-t">
-                  {projects.slice(0, 3).map(p => {
-                    const pct = Math.round(calculateProjectProgress(p.id))
-                    return (
-                      <div key={p.id} className="space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
-                          <span className="text-[10px] font-bold text-slate-500 truncate">{p.name.split(' ').slice(0, 2).join(' ')}</span>
-                        </div>
-                        <Progress value={pct} className="h-1.5" />
-                        <span className="text-[10px] text-slate-400">{pct}%</span>
-                      </div>
-                    )
-                  })}
+              </div>
+              <div className="space-y-3 pt-4">
+                <Progress value={globalPct} className="h-2 bg-slate-100 [&>div]:bg-[#006838]" />
+                <div className="flex flex-wrap gap-4 mt-2">
+                  {projects.slice(0,3).map(p => (
+                    <div key={p.id} className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
+                      <span className="text-[10px] font-bold text-slate-500 truncate max-w-[100px]">{p.name}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-          </Card>
+          </div>
 
-          <Card className="shadow-md border-none bg-white">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <Activity className="w-4 h-4 text-[#006838]" />
-                Portfólio por Categoria
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <div className="rounded-[32px] border border-slate-200 bg-white shadow-sm p-8 flex flex-col">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-8">Portfólio por Categoria</h3>
+            <div className="space-y-6 flex-1 justify-center flex flex-col">
               {Object.entries(byCategory).map(([cat, projs]) => {
-                const avgPct = projs.length
-                  ? Math.round(projs.reduce((a, p) => a + calculateProjectProgress(p.id), 0) / projs.length)
-                  : 0
+                const avgPct = projs.length ? Math.round(projs.reduce((a, p) => a + calculateProjectProgress(p.id), 0) / projs.length) : 0
                 return (
-                  <div key={cat} className="space-y-1.5">
+                  <div key={cat} className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="text-slate-400">{CATEGORY_ICONS[cat] || <FolderKanban className="w-4 h-4" />}</div>
-                        <span className="text-sm font-bold text-slate-700">{cat}</span>
-                        <Badge variant="secondary" className="text-[9px] h-4 px-1.5">{projs.length}</Badge>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-slate-100 text-[#006838]">{CATEGORY_ICONS[cat] || <FolderKanban className="w-4 h-4" />}</div>
+                        <span className="text-sm font-black text-slate-900">{cat}</span>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 bg-slate-100 font-black text-slate-500">{projs.length}</Badge>
                       </div>
                       <StatusPill pct={avgPct} />
                     </div>
-                    <Progress value={avgPct} className="h-1.5" />
+                    <Progress value={avgPct} className="h-2 bg-slate-100 [&>div]:bg-[#006838]" />
                   </div>
                 )
               })}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
         {/* ── Per-project KPI cards ─────────────────────────────── */}
         {projects.length > 0 && (
-          <div className="space-y-3">
-            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-[#006838]" /> Desempenho por Projeto
+          <div className="space-y-4">
+            <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+              <TrendingUp className="w-6 h-6 text-[#006838]" /> Projetos Ativos
             </h2>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {projects.map(p => {
@@ -217,58 +199,40 @@ export function ConsolidatedDashboard() {
                 const daysLeft = p.deadline ? Math.ceil((new Date(p.deadline).getTime() - now.getTime()) / 86400000) : null
 
                 return (
-                  <Card
+                  <div
                     key={p.id}
-                    className="border-none shadow-md bg-white hover:shadow-lg cursor-pointer transition-all"
                     onClick={() => selectProject(p.id)}
+                    className="group rounded-[24px] border border-slate-200 bg-white p-6 cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:border-[#006838]/30 transition-all duration-300 flex flex-col"
                   >
-                    <CardHeader className="pb-2 pt-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
-                          <p className="text-xs font-black text-slate-500 uppercase tracking-wider">{p.category}</p>
-                        </div>
-                        <StatusPill pct={pPct} />
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full shadow-sm" style={{ backgroundColor: p.color }} />
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">{p.category}</span>
                       </div>
-                      <p className="text-sm font-black text-slate-900 leading-snug mt-1">{p.name}</p>
-                    </CardHeader>
-                    <CardContent className="space-y-3 pb-4">
-                      <div>
-                        <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                      <StatusPill pct={pPct} />
+                    </div>
+                    <h3 className="text-lg font-black text-slate-900 leading-snug mb-5 line-clamp-2">{p.name}</h3>
+                    
+                    <div className="mt-auto space-y-4">
+                      <div className="flex gap-4 text-center">
+                        <div className="flex-1 bg-slate-50 rounded-xl p-2 border border-slate-100">
+                          <p className="text-xl font-black text-slate-800">{pDone}<span className="text-xs text-slate-400 font-bold ml-0.5">/{pTasks.length}</span></p>
+                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-0.5">Tarefas</p>
+                        </div>
+                        <div className="flex-1 bg-slate-50 rounded-xl p-2 border border-slate-100">
+                          <p className="text-xl font-black text-slate-800">{daysLeft !== null ? (daysLeft > 0 ? `${daysLeft}d` : 'Fim') : '—'}</p>
+                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-0.5">Restam</p>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5 pt-2">
+                        <div className="flex justify-between text-[10px] font-bold text-slate-500">
                           <span>PROGRESSO GERAL</span>
-                          <span>{pPct}%</span>
+                          <span className="text-slate-900">{pPct}%</span>
                         </div>
-                        <Progress value={pPct} className="h-2" />
+                        <Progress value={pPct} className="h-2 bg-slate-100 [&>div]:bg-[#006838]" />
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-center">
-                        <div className="bg-slate-50 rounded-lg p-2">
-                          <p className="text-sm font-black text-slate-700">{pDone}/{pTasks.length}</p>
-                          <p className="text-[9px] text-slate-400 font-bold uppercase">Tarefas</p>
-                        </div>
-                        <div className="bg-slate-50 rounded-lg p-2">
-                          <p className="text-sm font-black text-slate-700">{daysLeft !== null ? (daysLeft > 0 ? `${daysLeft}d` : 'Encerrado') : '—'}</p>
-                          <p className="text-[9px] text-slate-400 font-bold uppercase">Restam</p>
-                        </div>
-                      </div>
-                      {kpis.length > 0 && (
-                        <div className="space-y-1.5 pt-1 border-t">
-                          {kpis.slice(0, 2).map(k => {
-                            const kPct = k.target > 0 ? Math.min(Math.round((k.current / k.target) * 100), 100) : 0
-                            return (
-                              <div key={k.id} className="flex items-center gap-2">
-                                <p className="text-[10px] text-slate-500 font-bold truncate flex-1">{k.name}</p>
-                                <Progress value={kPct} className="h-1 w-16" />
-                                <p className="text-[10px] font-black text-slate-600 w-7 text-right">{kPct}%</p>
-                              </div>
-                            )
-                          })}
-                          {kpis.length > 2 && (
-                            <p className="text-[9px] text-slate-400 text-center">+{kpis.length - 2} mais KPIs</p>
-                          )}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 )
               })}
             </div>
@@ -277,33 +241,39 @@ export function ConsolidatedDashboard() {
 
         {/* ── KPI Matrix ───────────────────────────────────────── */}
         {kpiNames.length > 0 && (
-          <Card className="shadow-lg border-none overflow-hidden bg-white">
-            <CardHeader className="border-b bg-slate-50/50">
-              <CardTitle className="text-xl font-bold flex items-center gap-2">
-                <FileSpreadsheet className="w-5 h-5 text-[#006838]" />
-                Matriz de Desempenho por Indicador
-              </CardTitle>
-              <CardDescription>Comparativo de realizado vs. meta de cada KPI por projeto. Clique em um projeto para acessar o detalhe.</CardDescription>
-            </CardHeader>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50 hover:bg-slate-50">
-                    <TableHead className="font-bold text-slate-900 w-[200px] sticky left-0 z-20 bg-slate-50">Indicador</TableHead>
-                    <TableHead className="text-center font-bold text-slate-500 w-[60px]">Und.</TableHead>
-                    <TableHead className="text-center font-bold text-slate-500 w-[70px]">Tipo</TableHead>
-                    {projects.map(p => (
-                      <TableHead key={p.id} className="text-center font-bold text-slate-900 min-w-[160px]">
-                        <div className="flex flex-col items-center gap-1">
-                          <span className="truncate max-w-[130px] text-xs">{p.name.split(' ').slice(0, 3).join(' ')}</span>
-                          <div className="h-1 w-10 rounded-full" style={{ backgroundColor: p.color }} />
-                        </div>
+          <div className="space-y-6">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+                <FileSpreadsheet className="w-6 h-6 text-[#006838]" /> Desempenho por Indicador
+              </h2>
+              <p className="text-sm font-medium text-slate-500">Comparativo de realizado vs. meta de cada métrica em todos os projetos.</p>
+            </div>
+            
+            <div className="rounded-[32px] border-2 border-slate-200 bg-white overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/80 hover:bg-slate-50/80 border-b-2 border-slate-200">
+                      <TableHead className="w-[300px] sticky left-0 z-20 bg-white font-black text-slate-500 uppercase tracking-wider text-[11px] p-6 border-r-2 border-slate-200 shadow-sm">
+                        Métrica / Indicador Estratégico
                       </TableHead>
-                    ))}
-                    <TableHead className="text-right font-black text-[#006838] sticky right-0 z-20 bg-slate-50 border-l min-w-[120px]">TOTAL</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                      {projects.map(p => (
+                        <TableHead key={p.id} className="min-w-[180px] bg-white group hover:bg-slate-50/50 transition-colors p-6 align-bottom border-r border-slate-200">
+                          <div className="flex flex-col items-start gap-2">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{p.category}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="h-2.5 w-2.5 rounded-full shadow-sm ring-2 ring-white" style={{ backgroundColor: p.color }} />
+                              <span className="truncate max-w-[150px] text-[13px] font-black text-slate-900 leading-tight">{p.name}</span>
+                            </div>
+                          </div>
+                        </TableHead>
+                      ))}
+                      <TableHead className="min-w-[200px] sticky right-0 z-20 bg-[#006838]/5 text-right font-black text-[#006838] uppercase tracking-wider text-[11px] p-6 border-l-2 border-[#006838]/20 shadow-[-5px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                        Consolidado
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                   {kpiNames.map((name) => {
                     const kd = kpiMatrix[name]
                     let totalCurrent = 0, totalTarget = 0, activePj = 0
@@ -323,42 +293,74 @@ export function ConsolidatedDashboard() {
                       : 0
 
                     return (
-                      <TableRow key={name} className="hover:bg-green-50/30 transition-colors">
-                        <TableCell className="font-bold text-slate-700 sticky left-0 z-10 bg-white border-r">{name}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline" className="font-medium text-slate-500 text-[9px]">{kd.unit}</Badge>
+                      <TableRow key={name} className="hover:bg-slate-50/80 transition-colors group border-b border-slate-200 last:border-b-0">
+                        <TableCell className="p-6 align-top sticky left-0 z-10 bg-white group-hover:bg-slate-50/50 transition-colors border-r-2 border-slate-200 shadow-sm">
+                          <div className="flex flex-col gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-slate-100 rounded-lg text-slate-400 group-hover:text-slate-600 transition-colors">
+                                <Target className="w-4 h-4" />
+                              </div>
+                              <span className="text-sm font-black text-slate-800 leading-tight">{name}</span>
+                            </div>
+                            <div className="flex items-center gap-2 ml-10">
+                              <Badge variant="outline" className="text-[10px] font-black text-slate-500 bg-slate-50 border-slate-200 uppercase tracking-widest px-2 py-0.5 rounded-md">
+                                {kd.unit}
+                              </Badge>
+                              <Badge variant="secondary" className="text-[10px] font-black text-slate-500 bg-slate-100 uppercase tracking-widest px-2 py-0.5 rounded-md">
+                                {kd.aggregation === 'sum' ? '∑ Soma' : '⌀ Média'}
+                              </Badge>
+                            </div>
+                          </div>
                         </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="secondary" className="text-[9px] font-bold">
-                            {kd.aggregation === 'sum' ? '∑ Soma' : '⌀ Média'}
-                          </Badge>
-                        </TableCell>
+
                         {projects.map(p => {
                           const val = kd.projects[p.id]
                           const pct = val ? (val.target > 0 ? Math.min(Math.round((val.current / val.target) * 100), 100) : 0) : null
+
+                          let pctColorStr = "text-slate-400"
+                          let bgColorStr = "bg-slate-100"
+                          let bgProgressStr = "h-1.5"
+                          if (pct !== null) {
+                            if (pct >= 100) { pctColorStr = "text-green-600"; bgProgressStr = "h-1.5 [&>div]:bg-green-500"; bgColorStr = "bg-green-50" }
+                            else if (pct >= 50) { pctColorStr = "text-yellow-600"; bgProgressStr = "h-1.5 [&>div]:bg-yellow-500"; bgColorStr = "bg-yellow-50" }
+                            else { pctColorStr = "text-red-600"; bgProgressStr = "h-1.5 [&>div]:bg-red-500"; bgColorStr = "bg-red-50" }
+                          }
+
                           return (
-                            <TableCell key={p.id} className="text-center">
+                            <TableCell key={p.id} className="p-6 align-top border-r border-slate-200 bg-white/50">
                               {val ? (
-                                <div className="space-y-1">
-                                  <div className="text-xs font-bold text-slate-700">
-                                    {val.current.toLocaleString('pt-BR')} / {val.target.toLocaleString('pt-BR')}
+                                <div className="flex flex-col gap-2.5">
+                                  <div className="flex items-baseline gap-1">
+                                    <span className={cn("text-xl font-black leading-none text-slate-900")}>
+                                      {val.current.toLocaleString('pt-BR')}
+                                    </span>
+                                    <span className="text-[11px] font-bold text-slate-400">
+                                      / {val.target.toLocaleString('pt-BR')}
+                                    </span>
                                   </div>
-                                  <div className="flex items-center gap-1">
-                                    <Progress value={pct ?? 0} className="h-1.5 flex-1" />
-                                    <span className="text-[9px] font-black text-slate-500 w-7 text-right">{pct}%</span>
+                                  <div className={cn("flex items-center gap-3 p-2 rounded-lg", bgColorStr)}>
+                                    <Progress value={pct ?? 0} className={cn("flex-1 bg-white/50", bgProgressStr)} />
+                                    <span className={cn("text-[11px] font-black w-7 text-right", pctColorStr)}>{pct}%</span>
                                   </div>
                                 </div>
-                              ) : <span className="text-slate-300">—</span>}
+                              ) : <span className="text-slate-200 font-medium text-lg leading-none block pt-1">—</span>}
                             </TableCell>
                           )
                         })}
-                        <TableCell className="sticky right-0 z-10 bg-green-50/50 border-l">
-                          <div className="text-right space-y-1">
-                            <p className="text-sm font-black text-slate-900">
-                              {consolidated.current.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
-                            </p>
-                            <p className="text-[9px] text-slate-400">/ {consolidated.target.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</p>
-                            <StatusPill pct={consolidatedPct} />
+
+                        <TableCell className="p-6 align-top sticky right-0 z-10 bg-[#006838]/5 border-l-2 border-[#006838]/20 group-hover:bg-[#006838]/10 transition-colors shadow-[-5px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                          <div className="flex flex-col items-end gap-3 pr-2">
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-xl font-black text-[#006838] leading-none">
+                                {consolidated.current.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                              </span>
+                              <span className="text-[11px] font-bold text-[#006838]/50">
+                                / {consolidated.target.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 justify-end w-full min-w-[130px]">
+                              <StatusPill pct={consolidatedPct} />
+                            </div>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -367,11 +369,13 @@ export function ConsolidatedDashboard() {
                 </TableBody>
               </Table>
             </div>
-          </Card>
+          </div>
+        </div>
         )}
 
-        <div className="pt-6 text-center text-slate-400 text-[10px] font-bold uppercase tracking-widest pb-8">
-          Desenvolvido por Weslen Rian e William Kutz &bull; Gestão Estratégica Princesa dos Campos 2026
+        <div className="pt-10 text-center text-slate-400 text-[10px] font-black uppercase tracking-widest pb-8 flex flex-col gap-2 items-center">
+          <LogoPrincesa className="h-5 w-auto" />
+          <span>Gestão Estratégica &bull; Princesa dos Campos 2026</span>
         </div>
       </main>
     </div>
