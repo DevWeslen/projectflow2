@@ -62,7 +62,7 @@ export const useProjectStore = create<ProjectStore>()(
 
       login: (username, password) => {
         const user = get().users.find((u) => u.username === username)
-        if (user && password === '123') {
+        if (user && (user.password === password || (!user.password && password === '123'))) {
           set({ user })
           return true
         }

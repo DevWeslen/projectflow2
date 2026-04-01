@@ -50,10 +50,11 @@ export function UserManagement() {
     name: '',
     username: '',
     role: 'operador' as UserRole,
+    password: '',
   })
 
   const resetForm = () => {
-    setFormData({ name: '', username: '', role: 'operador' })
+    setFormData({ name: '', username: '', role: 'operador', password: '' })
     setEditingUser(null)
   }
 
@@ -73,6 +74,7 @@ export function UserManagement() {
       name: user.name,
       username: user.username,
       role: user.role,
+      password: user.password || '',
     })
     setIsAddDialogOpen(true)
   }
@@ -136,6 +138,16 @@ export function UserManagement() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Digite a senha"
+                  />
+                </div>
+                <div className="space-y-2 col-span-2">
                   <Label htmlFor="role">Nível de Acesso</Label>
                   <Select
                     value={formData.role}
