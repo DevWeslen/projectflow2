@@ -33,12 +33,31 @@ function StatusPill({ pct }: { pct: number }) {
 }
 
 export function ConsolidatedDashboard() {
-  const { projects, logout, user, calculateProjectProgress, selectProject, tasks } = useProjectStore()
+  const { 
+    projects, 
+    logout, 
+    user, 
+    calculateProjectProgress, 
+    selectProject, 
+    tasks 
+  } = useProjectStore()
+
+  const filteredProjects = projects.filter(project => {
+    if (!user) return false
+    if (['admin', 'conselho', 'diretoria'].includes(user.role)) return true
+    if (project.ownerId === user.id) return true
+    if (project.memberIds?.includes(user.id)) return true
+    return false
+  })
+
+  // Filter tasks based on accessible projects
+  const accessibleProjectIds = new Set(filteredProjects.map(p => p.id))
+  const filteredTasks = tasks.filter(t => accessibleProjectIds.has(t.projectId))
 
   // ── Global KPI aggregation ──────────────────────────────────
   const kpiMatrix: Record<string, { projects: Record<string, { current: number; target: number }>, unit: string, aggregation: string }> = {}
 
-  projects.forEach(project => {
+  filteredProjects.forEach(project => {
     ;(project.generalKpis || []).forEach(kpi => {
       if (!kpiMatrix[kpi.name]) {
         kpiMatrix[kpi.name] = { projects: {}, unit: kpi.unit, aggregation: kpi.aggregation || 'sum' }
@@ -52,7 +71,7 @@ export function ConsolidatedDashboard() {
   // ── Financial KPI (Revenue / Investment) ──────────────────────
   let globalTarget = 0
   let globalCurrent = 0
-  projects.forEach(p => {
+  filteredProjects.forEach(p => {
     ;(p.generalKpis || []).filter(k =>
       k.name.toLowerCase().includes('receita') ||
       k.name.toLowerCase().includes('investimento') ||
@@ -63,13 +82,13 @@ export function ConsolidatedDashboard() {
   const globalPct = Math.round((globalCurrent / globalTarget) * 100)
 
   // ── Project-level stats ──────────────────────────────────────
-  const totalTasks = tasks.length
-  const doneTasks = tasks.filter(t => t.status === 'done').length
-  const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
-  const totalKpis = projects.reduce((acc, p) => acc + (p.generalKpis?.length || 0), 0)
+  const totalTasks = filteredTasks.length
+  const doneTasks = filteredTasks.filter(t => t.status === 'done').length
+  const inProgressTasks = filteredTasks.filter(t => t.status === 'in-progress').length
+  const totalKpis = filteredProjects.reduce((acc, p) => acc + (p.generalKpis?.length || 0), 0)
 
   // ── By category ──────────────────────────────────────────────
-  const byCategory = projects.reduce((acc, p) => {
+  const byCategory = filteredProjects.reduce((acc, p) => {
     const cat = p.category || 'geral'
     if (!acc[cat]) acc[cat] = []
     acc[cat].push(p)
@@ -107,7 +126,7 @@ export function ConsolidatedDashboard() {
         {/* ── Top KPI summary cards ────────────────────────────── */}
         <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
           {[
-            { label: 'Projetos Ativos', value: projects.length, sub: `${byCategory ? Object.keys(byCategory).length : 0} categorias`, color: 'text-[#006838]', bg: 'bg-[#006838]/10 text-[#006838]', icon: <FolderKanban className="w-5 h-5" /> },
+            { label: 'Projetos Ativos', value: filteredProjects.length, sub: `${byCategory ? Object.keys(byCategory).length : 0} categorias`, color: 'text-[#006838]', bg: 'bg-[#006838]/10 text-[#006838]', icon: <FolderKanban className="w-5 h-5" /> },
             { label: 'Tarefas Concluídas', value: `${doneTasks}/${totalTasks}`, sub: `${totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0}% do total`, color: 'text-emerald-600', bg: 'bg-emerald-100 text-emerald-600', icon: <CheckCircle2 className="w-5 h-5" /> },
             { label: 'Em Andamento', value: inProgressTasks, sub: 'tarefas em fluxo', color: 'text-amber-600', bg: 'bg-amber-100 text-amber-600', icon: <Clock className="w-5 h-5" /> },
             { label: 'KPIs Analisados', value: totalKpis, sub: `${kpiNames.length} métricas ativas`, color: 'text-blue-600', bg: 'bg-blue-100 text-blue-600', icon: <Calculator className="w-5 h-5" /> },
@@ -150,7 +169,7 @@ export function ConsolidatedDashboard() {
               <div className="space-y-3 pt-4">
                 <Progress value={globalPct} className="h-2 bg-slate-100 [&>div]:bg-[#006838]" />
                 <div className="flex flex-wrap gap-4 mt-2">
-                  {projects.slice(0,3).map(p => (
+                  {filteredProjects.slice(0,3).map(p => (
                     <div key={p.id} className="flex items-center gap-2">
                       <div className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
                       <span className="text-[10px] font-bold text-slate-500 truncate max-w-[100px]">{p.name}</span>
@@ -185,15 +204,15 @@ export function ConsolidatedDashboard() {
         </div>
 
         {/* ── Per-project KPI cards ─────────────────────────────── */}
-        {projects.length > 0 && (
+        {filteredProjects.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
               <TrendingUp className="w-6 h-6 text-[#006838]" /> Projetos Ativos
             </h2>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {projects.map(p => {
+              {filteredProjects.map(p => {
                 const pPct = Math.round(calculateProjectProgress(p.id))
-                const pTasks = tasks.filter(t => t.projectId === p.id)
+                const pTasks = filteredTasks.filter(t => t.projectId === p.id)
                 const pDone = pTasks.filter(t => t.status === 'done').length
                 const kpis = p.generalKpis || []
                 const daysLeft = p.deadline ? Math.ceil((new Date(p.deadline).getTime() - now.getTime()) / 86400000) : null
@@ -257,7 +276,7 @@ export function ConsolidatedDashboard() {
                       <TableHead className="w-[300px] sticky left-0 z-20 bg-white font-black text-slate-500 uppercase tracking-wider text-[11px] p-6 border-r-2 border-slate-200 shadow-sm">
                         Métrica / Indicador Estratégico
                       </TableHead>
-                      {projects.map(p => (
+                      {filteredProjects.map(p => (
                         <TableHead key={p.id} className="min-w-[180px] bg-white group hover:bg-slate-50/50 transition-colors p-6 align-bottom border-r border-slate-200">
                           <div className="flex flex-col items-start gap-2">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{p.category}</span>
@@ -313,7 +332,7 @@ export function ConsolidatedDashboard() {
                           </div>
                         </TableCell>
 
-                        {projects.map(p => {
+                        {filteredProjects.map(p => {
                           const val = kd.projects[p.id]
                           const pct = val ? (val.target > 0 ? Math.min(Math.round((val.current / val.target) * 100), 100) : 0) : null
 

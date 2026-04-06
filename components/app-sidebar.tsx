@@ -41,6 +41,14 @@ export function AppSidebar({ onNewProject }: AppSidebarProps) {
 
   const canCreateProject = user?.role === 'admin' || user?.role === 'gerencia'
 
+  const filteredProjects = projects.filter(project => {
+    if (!user) return false
+    if (['admin', 'conselho', 'diretoria'].includes(user.role)) return true
+    if (project.ownerId === user.id) return true
+    if (project.memberIds?.includes(user.id)) return true
+    return false
+  })
+
   return (
     <Sidebar variant="inset" className="border-r border-sidebar-border shadow-2xl">
       <SidebarHeader className="h-24 border-b border-sidebar-border flex flex-row items-center px-4 gap-3 bg-sidebar">
@@ -69,7 +77,7 @@ export function AppSidebar({ onNewProject }: AppSidebarProps) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              {(user?.role === 'admin' || user?.role === 'gerencia' || user?.role === 'conselho') && (
+              {(user?.role === 'admin' || user?.role === 'gerencia' || user?.role === 'conselho' || user?.role === 'diretoria') && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     onClick={() => setActiveView('consolidated')}
@@ -100,7 +108,7 @@ export function AppSidebar({ onNewProject }: AppSidebarProps) {
           </div>
           <SidebarGroupContent>
             <SidebarMenu>
-              {projects.map((project) => (
+              {filteredProjects.map((project) => (
                 <SidebarMenuItem key={project.id}>
                   <SidebarMenuButton
                     onClick={() => selectProject(project.id)}

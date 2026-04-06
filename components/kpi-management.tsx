@@ -4,8 +4,9 @@ import { useState } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Target, TrendingUp, Plus, Edit2, Check, X, Calendar, Trash2, RefreshCw, Save } from 'lucide-react'
+import { Target, TrendingUp, Plus, Edit2, Check, X, Calendar, Trash2, RefreshCw, Save, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { MonthlyKpiDialog, EditingMonthly } from './monthly-kpi-dialog'
 import { Progress } from '@/components/ui/progress'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -35,6 +36,9 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
   const [editingKpiId, setEditingKpiId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState<string>('')
   const [editType, setEditType] = useState<'current' | 'target'>('current')
+
+  // ── Monthly KPI editing ────────────────────────────────────
+  const [editingMonthly, setEditingMonthly] = useState<EditingMonthly | null>(null)
 
   // ── General KPI editing ────────────────────────────────────
   const [editingGeneral, setEditingGeneral] = useState<EditingKpi | null>(null)
@@ -159,6 +163,84 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
     updateProject(projectId, { yearlyGoals: updatedGoals, generalKpis: updatedGeneralKpis })
     setEditingYearIndex(null)
     setEditingKpiId(null)
+  }
+
+  const handleOpenMonthly = (yIdx: number, baseKpi: KPI, yKpi: KPI) => {
+    const defaultMonthly = Array.from({length: 12}).map((_, i) => ({
+      monthIndex: i,
+      current: 0,
+      target: baseKpi.distribution === 'fraction' ? Math.round((yKpi.target / 12) * 100) / 100 : yKpi.target
+    }))
+    setEditingMonthly({
+      yearGoalId: yearlyGoals[yIdx].id,
+      kpiId: baseKpi.id,
+      kpiName: baseKpi.name,
+      unit: baseKpi.unit,
+      target: yKpi.target,
+      aggregation: baseKpi.aggregation,
+      monthly: yKpi.monthly || defaultMonthly
+    })
+  }
+
+  const handleSaveMonthly = (data: EditingMonthly) => {
+    let totalCurrent = 0
+    let validMonths = 0
+    data.monthly.forEach(m => {
+      if (m.current > 0 || data.aggregation === 'sum') {
+        totalCurrent += m.current
+        validMonths++
+      }
+    })
+    
+    let newYearCurrent = data.aggregation === 'sum' 
+      ? totalCurrent 
+      : (validMonths > 0 ? totalCurrent / validMonths : 0)
+    
+    newYearCurrent = Math.round(newYearCurrent * 100) / 100
+
+    // Também reconcilia a META (Target) a partir das entradas mensais
+    let totalMonthlyTarget = 0
+    let validTargetMonths = 0
+    data.monthly.forEach(m => {
+      totalMonthlyTarget += (m.target || 0)
+      if (m.target > 0) validTargetMonths++
+    })
+
+    const newYearTarget = data.aggregation === 'sum'
+      ? totalMonthlyTarget
+      : (validTargetMonths > 0 ? totalMonthlyTarget / validTargetMonths : 0)
+
+    const updatedGoals = yearlyGoals.map(yg => {
+      if (yg.id !== data.yearGoalId) return yg
+      return {
+        ...yg,
+        kpis: yg.kpis.map(yKpi => {
+          if (yKpi.id !== data.kpiId) return yKpi
+          return {
+            ...yKpi,
+            monthly: data.monthly,
+            current: newYearCurrent,
+            target: Math.round(newYearTarget * 100) / 100
+          }
+        })
+      }
+    })
+    
+    const updatedGeneralKpis = kpis.map(k => {
+      if (k.id !== data.kpiId) return k
+      let newCurrent = 0, newTarget = 0, validYears = 0
+      updatedGoals.forEach(g => {
+        const gk = g.kpis.find(x => x.id === k.id)
+        if (gk) { newCurrent += gk.current; newTarget += gk.target; validYears++ }
+      })
+      if (k.aggregation === 'average' && validYears > 0) {
+        return { ...k, current: newCurrent / validYears, target: newTarget / validYears }
+      }
+      return { ...k, current: newCurrent, target: newTarget }
+    })
+
+    updateProject(projectId, { yearlyGoals: updatedGoals, generalKpis: updatedGeneralKpis })
+    setEditingMonthly(null)
   }
 
   const startEditing = (yearIdx: number, kpi: KPI, type: 'current' | 'target') => {
@@ -569,6 +651,17 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                                   </div>
                                 )}
                               </div>
+
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-full min-h-[50px] border-slate-200 text-slate-500 hover:text-[#006838] hover:border-[#006838]/30 hover:bg-[#006838]/5 font-bold gap-1.5 flex-col justify-center px-4 shadow-sm"
+                                onClick={() => handleOpenMonthly(yIdx, baseKpi, yKpi)}
+                                title="Gráficos e Detalhamento Mensal"
+                              >
+                                <BarChart3 className="h-4 w-4" />
+                                <span className="text-[9px] uppercase tracking-widest leading-none">Meses</span>
+                              </Button>
                             </div>
 
                             {/* Mini Progress */}
@@ -611,6 +704,12 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
           </p>
         </Card>
       )}
+
+      <MonthlyKpiDialog 
+        editingMonthly={editingMonthly} 
+        setEditingMonthly={setEditingMonthly} 
+        onSave={handleSaveMonthly} 
+      />
 
       {/* Pop-up estilizado para Exclusão de Ano */}
       {deleteYearConfirm && (

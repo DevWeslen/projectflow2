@@ -13,15 +13,34 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onNewProject }: DashboardProps) {
-  const { projects, tasks, calculateProjectProgress, selectProject, seedExamples } = useProjectStore()
+  const { 
+    projects, 
+    tasks, 
+    calculateProjectProgress, 
+    selectProject, 
+    seedExamples,
+    user
+  } = useProjectStore()
 
-  const totalProjects = projects.length
-  const totalTasks = tasks.length
-  const completedTasks = tasks.filter(t => t.status === 'done').length
-  const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length
+  const filteredProjects = projects.filter(project => {
+    if (!user) return false
+    if (['admin', 'conselho', 'diretoria'].includes(user.role)) return true
+    if (project.ownerId === user.id) return true
+    if (project.memberIds?.includes(user.id)) return true
+    return false
+  })
+
+  // Filter tasks based on accessible projects
+  const accessibleProjectIds = new Set(filteredProjects.map(p => p.id))
+  const filteredTasks = tasks.filter(t => accessibleProjectIds.has(t.projectId))
+
+  const totalProjects = filteredProjects.length
+  const totalTasks = filteredTasks.length
+  const completedTasks = filteredTasks.filter(t => t.status === 'done').length
+  const inProgressTasks = filteredTasks.filter(t => t.status === 'in-progress').length
 
   const avgProgress = totalProjects > 0
-    ? projects.reduce((acc, p) => acc + calculateProjectProgress(p.id), 0) / totalProjects
+    ? filteredProjects.reduce((acc, p) => acc + calculateProjectProgress(p.id), 0) / totalProjects
     : 0
 
   return (
@@ -29,8 +48,8 @@ export function Dashboard({ onNewProject }: DashboardProps) {
       <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 animate-in-fade pb-10">
         <div className="flex flex-col gap-6 sm:flex-row sm:justify-between sm:items-end">
           <div className="space-y-1">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight">
-              Olá! 👋
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight uppercase">
+              Olá, {user?.name.split(' ')[0]}! 👋
             </h1>
             <p className="text-muted-foreground text-base sm:text-lg max-w-md">
               Aqui está a visão geral dos seus projetos e progresso.
@@ -147,7 +166,7 @@ export function Dashboard({ onNewProject }: DashboardProps) {
             <div className="h-px flex-1 bg-border/50 shadow-sm" />
           </div>
 
-          {projects.length === 0 ? (
+          {filteredProjects.length === 0 ? (
             <Card className="glass-card border-dashed">
               <CardContent className="py-20 text-center">
                 <div className="bg-primary/5 h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -176,7 +195,7 @@ export function Dashboard({ onNewProject }: DashboardProps) {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {projects.map((project) => {
+              {filteredProjects.map((project) => {
                 const progress = calculateProjectProgress(project.id)
                 const projectTasks = tasks.filter(t => t.projectId === project.id)
                 const methodology = METHODOLOGY_INFO[project.methodology]

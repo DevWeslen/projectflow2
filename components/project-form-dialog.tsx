@@ -31,7 +31,7 @@ interface ProjectFormDialogProps {
 }
 
 export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps) {
-  const { addProject } = useProjectStore()
+  const { addProject, users, user: currentUser } = useProjectStore()
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -41,6 +41,7 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
   const [color, setColor] = useState(PROJECT_COLORS[0])
   const [sprintDuration, setSprintDuration] = useState('2')
   const [totalSprints, setTotalSprints] = useState('4')
+  const [memberIds, setMemberIds] = useState<string[]>([])
 
   // Initial KPIs
   const [kpis, setKpis] = useState<KPI[]>([])
@@ -90,7 +91,9 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
       sprintDuration: methodology === 'scrum' ? Number(sprintDuration) : undefined,
       totalSprints: methodology === 'scrum' ? Number(totalSprints) : undefined,
       generalKpis: kpis,
-      yearlyGoals: undefined as any // store will auto-generate
+      yearlyGoals: undefined as any, // store will auto-generate
+      ownerId: currentUser?.id || 'system',
+      memberIds: [currentUser?.id || 'system', ...memberIds]
     })
 
     resetForm()
@@ -112,6 +115,7 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
     setKpiUnit('')
     setKpiAggregation('sum')
     setKpiDistribution('fraction')
+    setMemberIds([])
     setShowKpiInput(false)
   }
 
@@ -274,6 +278,39 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Members Selection */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground uppercase">Membros com Acesso</label>
+            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 rounded-xl bg-secondary/20 border border-border/50">
+              {users.filter(u => u.id !== currentUser?.id).map((u) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => {
+                    setMemberIds(prev => 
+                      prev.includes(u.id) 
+                        ? prev.filter(id => id !== u.id) 
+                        : [...prev, u.id]
+                    )
+                  }}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all border",
+                    memberIds.includes(u.id)
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                      : "bg-background/50 border-border/50 text-muted-foreground hover:border-primary/50"
+                  )}
+                >
+                  {u.name}
+                  {memberIds.includes(u.id) && <Check className="h-3 w-3" />}
+                </button>
+              ))}
+              {users.filter(u => u.id !== currentUser?.id).length === 0 && (
+                <p className="text-[10px] text-muted-foreground italic p-1">Nenhum outro usuário cadastrado para seleção.</p>
+              )}
+            </div>
+            <p className="text-[9px] text-muted-foreground font-medium italic">Nota: Você (criador), Admin, Conselho e Diretoria sempre terão acesso aos projetos.</p>
           </div>
 
           {/* Methodology Selection */}

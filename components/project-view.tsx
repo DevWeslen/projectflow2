@@ -35,6 +35,7 @@ import {
 } from 'lucide-react'
 import { exportProjectToCSV, exportRiskToCSV, exportFullProjectToCSV } from '@/lib/export-utils'
 import { ProjectReport } from './project-report'
+import { ProjectSettingsDialog } from './project-settings-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,7 +65,7 @@ interface ProjectViewProps {
 }
 
 export function ProjectView({ projectId }: ProjectViewProps) {
-  const { projects, tasks, riskAnalyses, calculateProjectProgress, deleteProject, selectProject } = useProjectStore()
+  const { projects, tasks, riskAnalyses, calculateProjectProgress, deleteProject, selectProject, user } = useProjectStore()
 
   const project = projects.find(p => p.id === projectId)
   const projectAnalyses = riskAnalyses.filter(r => r.projectId === projectId)
@@ -72,6 +73,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
   const [taskParentId, setTaskParentId] = useState<string | null>(null)
   const [editTask, setEditTask] = useState<Task | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
 
   // Default view based on methodology
@@ -112,6 +114,8 @@ export function ProjectView({ projectId }: ProjectViewProps) {
     deleteProject(projectId)
     setDeleteDialogOpen(false)
   }
+
+  const isOwnerOrAdmin = user?.role === 'admin' || user?.role === 'conselho' || user?.role === 'diretoria' || project.ownerId === user?.id
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden premium-gradient">
@@ -196,10 +200,12 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                   <DropdownMenuSeparator />
 
                   <div className="px-2 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Gerenciar</div>
-                  <DropdownMenuItem>
-                    <Settings className="h-4 w-4 mr-2" />
-                    Configuracoes
-                  </DropdownMenuItem>
+                  {isOwnerOrAdmin && (
+                    <DropdownMenuItem onClick={() => setIsSettingsOpen(true)}>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Configuracoes
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive font-semibold"
@@ -472,6 +478,13 @@ export function ProjectView({ projectId }: ProjectViewProps) {
 
       {/* Report View (Print Only) */}
       <ProjectReport projectId={projectId} />
+
+      {/* Settings Dialog */}
+      <ProjectSettingsDialog 
+        project={project} 
+        open={isSettingsOpen} 
+        onOpenChange={setIsSettingsOpen} 
+      />
     </div>
   )
 
