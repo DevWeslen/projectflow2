@@ -1,0 +1,68 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id       String  @id @default(cuid())
+  name     String
+  username String  @unique
+  role     String
+  password String? @default("123")
+  projects Project[] @relation("ProjectOwner")
+}
+
+model Project {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  methodology  String
+  color        String
+  category     String
+  ownerId      String
+  owner        User     @relation("ProjectOwner", fields: [ownerId], references: [id])
+  memberIds    String   // JSON array of strings
+  generalKpis  String   // JSON array of KPI objects
+  yearlyGoals  String   // JSON array of YearlyGoal objects
+  deadline     DateTime?
+  sprintDuration Int?
+  totalSprints  Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  tasks        Task[]
+  riskAnalyses RiskAnalysis[]
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parentId    String?
+  title       String
+  description String?
+  status      String
+  progress    Float
+  order       Int
+  deadline    DateTime?
+  sprint      Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model RiskAnalysis {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  data      String   // JSON object
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

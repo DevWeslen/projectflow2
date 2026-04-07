@@ -41,6 +41,15 @@ interface ProjectStore {
   addUser: (userData: Omit<User, 'id'>) => void
   updateUser: (id: string, updates: Partial<User>) => void
   deleteUser: (id: string) => void
+  initStore: () => Promise<void>
+}
+
+const backgroundSync = (url: string, method: string, data?: any) => {
+  fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: data ? JSON.stringify(data) : undefined,
+  }).catch(err => console.error('Sync error:', err))
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 15)
@@ -54,6 +63,24 @@ export const useProjectStore = create<ProjectStore>()(
       selectedProjectId: null,
       activeView: 'main',
       user: null,
+      initStore: async () => {
+        try {
+          const res = await fetch('/api/sync')
+          if (res.ok) {
+            const data = await res.json()
+            set((state) => ({
+              ...state,
+              projects: data.projects || state.projects,
+              tasks: data.tasks || state.tasks,
+              users: data.users && data.users.length > 0 ? data.users : state.users,
+              riskAnalyses: data.riskAnalyses || state.riskAnalyses
+            }))
+          }
+        } catch (error) {
+          console.error("Failed to sync store with backend", error)
+        }
+      },
+
       users: [
         { id: '1', name: 'Admin TI', username: 'admin', role: 'admin' },
         { id: '2', name: 'Diretoria Princesa', username: 'diretor', role: 'conselho' },
@@ -75,21 +102,25 @@ export const useProjectStore = create<ProjectStore>()(
 
       addUser: (userData) => {
         const id = generateId()
+        const user = { ...userData, id }
         set((state) => ({
-          users: [...state.users, { ...userData, id }]
+          users: [...state.users, user]
         }))
+        backgroundSync('/api/users', 'POST', user)
       },
 
       updateUser: (id, updates) => {
         set((state) => ({
           users: state.users.map((u) => (u.id === id ? { ...u, ...updates } : u))
         }))
+        backgroundSync('/api/users', 'PUT', { id, ...updates })
       },
 
       deleteUser: (id) => {
         set((state) => ({
           users: state.users.filter((u) => u.id !== id)
         }))
+        backgroundSync(`/api/users?id=${id}`, 'DELETE')
       },
 
       setActiveView: (view) => {
@@ -148,6 +179,7 @@ export const useProjectStore = create<ProjectStore>()(
           projects: [...state.projects, project],
           selectedProjectId: id
         }))
+        backgroundSync('/api/projects', 'POST', project)
         return id
       },
 
@@ -157,6 +189,7 @@ export const useProjectStore = create<ProjectStore>()(
             p.id === id ? { ...p, ...updates, updatedAt: new Date() } : p
           )
         }))
+        backgroundSync('/api/projects', 'PUT', { id, ...updates })
       },
 
       deleteProject: (id) => {
@@ -166,6 +199,7 @@ export const useProjectStore = create<ProjectStore>()(
           riskAnalyses: state.riskAnalyses.filter((r) => r.projectId !== id),
           selectedProjectId: state.selectedProjectId === id ? null : state.selectedProjectId
         }))
+        backgroundSync(`/api/projects?id=${id}`, 'DELETE')
       },
 
       addTask: (taskData) => {
@@ -184,6 +218,7 @@ export const useProjectStore = create<ProjectStore>()(
           order: siblingTasks.length
         }
         set((state) => ({ tasks: [...state.tasks, task] }))
+        backgroundSync('/api/tasks', 'POST', task)
         return id
       },
 
@@ -238,6 +273,8 @@ export const useProjectStore = create<ProjectStore>()(
 
           return { tasks }
         })
+        // Syncing just the updated task to backend to keep it simple
+        backgroundSync('/api/tasks', 'PUT', { id, ...updates })
       },
 
       deleteTask: (id) => {
@@ -251,6 +288,7 @@ export const useProjectStore = create<ProjectStore>()(
         set((state) => ({
           tasks: state.tasks.filter((t) => !idsToDelete.includes(t.id))
         }))
+        idsToDelete.forEach(toDelete => backgroundSync(`/api/tasks?id=${toDelete}`, 'DELETE'))
       },
 
       addRiskAnalysis: (analysisData) => {
@@ -263,6 +301,7 @@ export const useProjectStore = create<ProjectStore>()(
           updatedAt: now
         }
         set((state) => ({ riskAnalyses: [...state.riskAnalyses, analysis] }))
+        backgroundSync('/api/risk-analyses', 'POST', analysis)
         return id
       },
 
@@ -272,12 +311,14 @@ export const useProjectStore = create<ProjectStore>()(
             r.id === id ? { ...r, ...updates, updatedAt: new Date() } : r
           )
         }))
+        backgroundSync('/api/risk-analyses', 'PUT', { id, ...updates })
       },
 
       deleteRiskAnalysis: (id) => {
         set((state) => ({
           riskAnalyses: state.riskAnalyses.filter((r) => r.id !== id)
         }))
+        backgroundSync(`/api/risk-analyses?id=${id}`, 'DELETE')
       },
 
       getProjectTasks: (projectId) => {

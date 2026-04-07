@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/app-sidebar'
@@ -14,6 +14,10 @@ import { UserManagement } from '@/components/user-management'
 export default function Home() {
   const { selectedProjectId, user, activeView } = useProjectStore()
   const [projectDialogOpen, setProjectDialogOpen] = useState(false)
+
+  useEffect(() => {
+    useProjectStore.getState().initStore()
+  }, [])
 
   if (!user) {
     return <LoginScreen />
