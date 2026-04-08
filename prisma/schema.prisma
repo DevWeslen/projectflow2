@@ -29,9 +29,13 @@ model Project {
   ownerId      String
   owner        User     @relation("ProjectOwner", fields: [ownerId], references: [id])
   memberIds    String   // JSON array of strings
+  stakeholderIds String? // JSON array of strings
+  attachments  String?   // JSON array of attachment objects
   generalKpis  String   // JSON array of KPI objects
   yearlyGoals  String   // JSON array of YearlyGoal objects
   deadline     DateTime?
+  actualStartDate DateTime?
+  actualEndDate   DateTime?
   sprintDuration Int?
   totalSprints  Int?
   createdAt    DateTime @default(now())
@@ -45,12 +49,17 @@ model Task {
   projectId   String
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   parentId    String?
+  ownerId     String?
+  stakeholderIds String? // JSON array of strings
+  attachments String?   // JSON array of attachment objects
   title       String
   description String?
   status      String
   progress    Float
   order       Int
   deadline    DateTime?
+  actualStartDate DateTime?
+  actualEndDate   DateTime?
   sprint      Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

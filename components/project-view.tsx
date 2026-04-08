@@ -14,6 +14,8 @@ import { KanbanBoard } from './kanban-board'
 import { ProjectDiagram } from './project-diagram'
 import { RiskAnalysisView } from './risk-analysis-view'
 import { KpiManagement } from './kpi-management'
+import { ProjectTimeline } from './project-timeline'
+import { UserAvatar, UserAvatarGroup } from './user-avatar'
 import {
   ArrowLeft,
   Plus,
@@ -31,7 +33,9 @@ import {
   Minimize2,
   Download,
   FileText,
-  Layers
+  Layers,
+  History,
+  Users
 } from 'lucide-react'
 import { exportProjectToCSV, exportRiskToCSV, exportFullProjectToCSV } from '@/lib/export-utils'
 import { ProjectReport } from './project-report'
@@ -77,7 +81,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   // Default view based on methodology
-  const [view, setView] = useState<'tree' | 'board' | 'diagram' | 'risk' | 'kpi'>(() => {
+  const [view, setView] = useState<'tree' | 'board' | 'diagram' | 'risk' | 'kpi' | 'timeline'>(() => {
     if (!project) return 'tree'
     if (project.methodology === 'kanban' || project.methodology === 'scrum') return 'board'
     if (project.methodology === 'waterfall') return 'diagram'
@@ -150,11 +154,33 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                 </div>
               </div>
 
-              <div className="hidden xs:block">
+              <div className="hidden xs:flex items-center gap-4 border-l border-border/50 pl-4">
+                <div className="flex flex-col gap-1">
+                   <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Responsável</span>
+                   <UserAvatar 
+                     name={useProjectStore.getState().users.find(u => u.id === project.ownerId)?.name || 'Owner'} 
+                     role="Project Owner"
+                     size="sm"
+                   />
+                </div>
+
+                {Array.isArray(project.stakeholderIds) && project.stakeholderIds.length > 0 && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Interessados</span>
+                    <UserAvatarGroup 
+                      users={project.stakeholderIds.map(id => {
+                        const u = useProjectStore.getState().users.find(user => user.id === id)
+                        return { name: u?.name || 'User', role: 'Stakeholder' }
+                      })} 
+                      size="sm"
+                    />
+                  </div>
+                )}
+
                 <TooltipProvider delayDuration={200}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Badge variant="secondary" className="bg-secondary/80 backdrop-blur-sm border-none px-2 sm:px-3 py-1 font-bold text-[9px] sm:text-[10px] uppercase cursor-help shrink-0">
+                      <Badge variant="secondary" className="bg-secondary/80 backdrop-blur-sm border-none px-2 sm:px-3 py-1 font-bold text-[9px] sm:text-[10px] uppercase cursor-help shrink-0 h-fit">
                         {methodology.icon} <span className="hidden sm:inline ml-1">{methodology.name}</span>
                       </Badge>
                     </TooltipTrigger>
@@ -372,6 +398,16 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                     <Target className="h-4 w-4 mb-1" />
                     <span className="text-[9px] font-black uppercase tracking-tighter">Metas</span>
                   </button>
+                  <button
+                    onClick={() => setView('timeline')}
+                    className={cn(
+                      "flex flex-col items-center justify-center py-2 rounded-lg transition-all",
+                      view === 'timeline' ? "bg-background shadow-lg text-blue-500" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <History className="h-4 w-4 mb-1" />
+                    <span className="text-[9px] font-black uppercase tracking-tighter">Timeline</span>
+                  </button>
                 </div>
               </Card>
             </div>
@@ -395,6 +431,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                       {view === 'tree' && <><ListTree className="h-5 w-5 text-primary" /> Estrutura do Projeto</>}
                       {view === 'board' && <><LayoutDashboard className="h-5 w-5 text-primary" /> Kanban Board</>}
                       {view === 'diagram' && <><Network className="h-5 w-5 text-primary" /> Fluxo do Projeto</>}
+                      {view === 'timeline' && <><History className="h-5 w-5 text-primary" /> Cronograma Real</>}
                     </CardTitle>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-[10px] font-black tracking-tighter uppercase px-2 py-0">
@@ -436,6 +473,9 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                     <div className="p-4 sm:p-6">
                       <ProjectDiagram projectId={projectId} />
                     </div>
+                  )}
+                  {view === 'timeline' && (
+                    <ProjectTimeline projectId={projectId} />
                   )}
                 </CardContent>
               </Card>

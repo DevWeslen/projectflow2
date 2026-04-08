@@ -7,6 +7,8 @@ export async function GET() {
     return NextResponse.json(projects.map(p => ({
       ...p,
       memberIds: JSON.parse(p.memberIds),
+      stakeholderIds: p.stakeholderIds ? JSON.parse(p.stakeholderIds) : [],
+      attachments: p.attachments ? JSON.parse(p.attachments) : [],
       generalKpis: JSON.parse(p.generalKpis),
       yearlyGoals: JSON.parse(p.yearlyGoals)
     })))
@@ -28,9 +30,13 @@ export async function POST(request: Request) {
         category: data.category,
         ownerId: data.ownerId,
         memberIds: JSON.stringify(data.memberIds || []),
+        stakeholderIds: JSON.stringify(data.stakeholderIds || []),
+        attachments: JSON.stringify(data.attachments || []),
         generalKpis: JSON.stringify(data.generalKpis || []),
         yearlyGoals: JSON.stringify(data.yearlyGoals || []),
         deadline: data.deadline ? new Date(data.deadline) : null,
+        actualStartDate: data.actualStartDate ? new Date(data.actualStartDate) : null,
+        actualEndDate: data.actualEndDate ? new Date(data.actualEndDate) : null,
         sprintDuration: data.sprintDuration,
         totalSprints: data.totalSprints
       }
@@ -38,6 +44,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ...project,
       memberIds: JSON.parse(project.memberIds),
+      stakeholderIds: JSON.parse(project.stakeholderIds || '[]'),
+      attachments: JSON.parse(project.attachments || '[]'),
       generalKpis: JSON.parse(project.generalKpis),
       yearlyGoals: JSON.parse(project.yearlyGoals)
     })
@@ -54,9 +62,13 @@ export async function PUT(request: Request) {
 
     const updateData: any = { ...updates }
     if (updates.memberIds) updateData.memberIds = JSON.stringify(updates.memberIds)
+    if (updates.stakeholderIds) updateData.stakeholderIds = JSON.stringify(updates.stakeholderIds)
+    if (updates.attachments) updateData.attachments = JSON.stringify(updates.attachments)
     if (updates.generalKpis) updateData.generalKpis = JSON.stringify(updates.generalKpis)
     if (updates.yearlyGoals) updateData.yearlyGoals = JSON.stringify(updates.yearlyGoals)
     if (updates.deadline) updateData.deadline = new Date(updates.deadline)
+    if (updates.actualStartDate) updateData.actualStartDate = new Date(updates.actualStartDate)
+    if (updates.actualEndDate) updateData.actualEndDate = new Date(updates.actualEndDate)
 
     const project = await prisma.project.update({
       where: { id },
@@ -65,6 +77,8 @@ export async function PUT(request: Request) {
     return NextResponse.json({
       ...project,
       memberIds: JSON.parse(project.memberIds),
+      stakeholderIds: JSON.parse(project.stakeholderIds || '[]'),
+      attachments: JSON.parse(project.attachments || '[]'),
       generalKpis: JSON.parse(project.generalKpis),
       yearlyGoals: JSON.parse(project.yearlyGoals)
     })

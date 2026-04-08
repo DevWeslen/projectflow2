@@ -172,7 +172,9 @@ export const useProjectStore = create<ProjectStore>()(
           generalKpis: baseKpis,
           yearlyGoals: projectData.yearlyGoals || autoYearlyGoals,
           ownerId: projectData.ownerId || get().user?.id || 'system',
-          memberIds: projectData.memberIds || [get().user?.id || 'system']
+          memberIds: projectData.memberIds || [get().user?.id || 'system'],
+          stakeholderIds: projectData.stakeholderIds || [],
+          attachments: projectData.attachments || [],
         }
 
         set((state) => ({
@@ -211,6 +213,8 @@ export const useProjectStore = create<ProjectStore>()(
           : state.tasks.filter(t => t.projectId === taskData.projectId && t.parentId === null)
 
         const task: Task = {
+          stakeholderIds: [],
+          attachments: [],
           ...taskData,
           id,
           createdAt: now,
@@ -233,6 +237,14 @@ export const useProjectStore = create<ProjectStore>()(
           const isKanban = project?.methodology === 'kanban'
 
           const updatedTask = { ...task, ...updates, updatedAt: new Date() }
+
+          // Auto-mark actual end date if progress becomes 100
+          if (updates.progress === 100 && !task.actualEndDate) {
+            updatedTask.actualEndDate = new Date()
+          }
+          if (updates.progress !== undefined && updates.progress > 0 && !task.actualStartDate) {
+            updatedTask.actualStartDate = new Date()
+          }
 
           if (updates.progress !== undefined && !updates.status && isKanban) {
             updatedTask.status = autoStatusFromProgress(updatedTask.progress)

@@ -1,5 +1,4 @@
-'use client'
-
+import { useState, useMemo } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -14,6 +13,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { KPI, Project } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { LogoPrincesa } from '@/components/logo-princesa'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   'Frota': <Bus className="w-4 h-4" />,
@@ -42,13 +48,45 @@ export function ConsolidatedDashboard() {
     tasks 
   } = useProjectStore()
 
-  const filteredProjects = projects.filter(project => {
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [selectedOwner, setSelectedOwner] = useState<string>('all')
+
+  const { users } = useProjectStore()
+
+  const availableYears = useMemo(() => {
+    const years = new Set<number>()
+    projects.forEach((p: Project) => {
+      p.yearlyGoals?.forEach((g: any) => years.add(g.year))
+      if (p.createdAt) years.add(new Date(p.createdAt).getFullYear())
+    })
+    if (years.size === 0) years.add(new Date().getFullYear())
+    return Array.from(years).sort((a, b) => b - a)
+  }, [projects])
+
+  const filteredProjects = useMemo(() => projects.filter((project: Project) => {
     if (!user) return false
-    if (['admin', 'conselho', 'diretoria'].includes(user.role)) return true
-    if (project.ownerId === user.id) return true
-    if (project.memberIds?.includes(user.id)) return true
-    return false
-  })
+    
+    // Check access
+    const hasAccess = ['admin', 'conselho', 'diretoria'].includes(user.role) || 
+                     project.ownerId === user.id || 
+                     project.memberIds?.includes(user.id)
+    
+    if (!hasAccess) return false
+
+    // Filter by year: project must have a goal in that year or have been created in/before that year
+    const hasGoalInYear = project.yearlyGoals?.some((g: any) => g.year === selectedYear)
+    const wasCreatedInOrBefore = project.createdAt && new Date(project.createdAt).getFullYear() <= selectedYear
+    if (!hasGoalInYear && !wasCreatedInOrBefore) return false
+
+    // Filter by Category
+    if (selectedCategory !== 'all' && project.category !== selectedCategory) return false
+
+    // Filter by Owner
+    if (selectedOwner !== 'all' && project.ownerId !== selectedOwner) return false
+
+    return true
+  }), [projects, user, selectedYear, selectedCategory, selectedOwner])
 
   // Filter tasks based on accessible projects
   const accessibleProjectIds = new Set(filteredProjects.map(p => p.id))
@@ -58,7 +96,11 @@ export function ConsolidatedDashboard() {
   const kpiMatrix: Record<string, { projects: Record<string, { current: number; target: number }>, unit: string, aggregation: string }> = {}
 
   filteredProjects.forEach(project => {
-    ;(project.generalKpis || []).forEach(kpi => {
+    // Get KPIs for the selected year if they exist, otherwise fallback to general
+    const yearGoal = project.yearlyGoals?.find(g => g.year === selectedYear)
+    const kpisToUse = yearGoal ? yearGoal.kpis : (project.generalKpis || [])
+
+    kpisToUse.forEach(kpi => {
       if (!kpiMatrix[kpi.name]) {
         kpiMatrix[kpi.name] = { projects: {}, unit: kpi.unit, aggregation: kpi.aggregation || 'sum' }
       }
@@ -71,12 +113,15 @@ export function ConsolidatedDashboard() {
   // ── Financial KPI (Revenue / Investment) ──────────────────────
   let globalTarget = 0
   let globalCurrent = 0
-  filteredProjects.forEach(p => {
-    ;(p.generalKpis || []).filter(k =>
+  filteredProjects.forEach((p: Project) => {
+    const yearGoal = p.yearlyGoals?.find((g: any) => g.year === selectedYear)
+    const kpisToUse = yearGoal ? yearGoal.kpis : (p.generalKpis || [])
+
+    kpisToUse.filter((k: KPI) =>
       k.name.toLowerCase().includes('receita') ||
       k.name.toLowerCase().includes('investimento') ||
       k.unit === 'R$'
-    ).forEach(k => { globalTarget += k.target; globalCurrent += k.current })
+    ).forEach((k: KPI) => { globalTarget += k.target; globalCurrent += k.current })
   })
   if (globalTarget === 0) { globalTarget = 42800000; globalCurrent = 7690000 }
   const globalPct = Math.round((globalCurrent / globalTarget) * 100)
@@ -106,12 +151,67 @@ export function ConsolidatedDashboard() {
         <div className="hidden sm:flex items-center gap-2 font-medium text-zinc-900 text-sm">
           <span>Painel Estratégico</span>
         </div>
-        <div className="ml-auto flex items-center gap-3 sm:gap-5">
-          <div className="hidden sm:flex flex-col items-end pr-5 border-r border-zinc-200">
+        <div className="ml-auto flex items-center gap-2 sm:gap-4 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
+          {/* Year Filter */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest hidden lg:block">Ano:</span>
+            <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+              <SelectTrigger className="w-[85px] h-8 text-[10px] font-bold border-zinc-200 bg-white">
+                <SelectValue placeholder="Ano" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableYears.map(year => (
+                  <SelectItem key={year} value={year.toString()} className="text-[10px] font-bold">
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Category Filter */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest hidden lg:block">Cat:</span>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-[110px] h-8 text-[10px] font-bold border-zinc-200 bg-white">
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-[10px] font-bold">Todas Categorias</SelectItem>
+                {Array.from(new Set(projects.map(p => p.category || 'geral'))).map(cat => (
+                  <SelectItem key={cat} value={cat} className="text-[10px] font-bold">
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Owner Filter */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest hidden lg:block">Dono:</span>
+            <Select value={selectedOwner} onValueChange={setSelectedOwner}>
+              <SelectTrigger className="w-[110px] h-8 text-[10px] font-bold border-zinc-200 bg-white">
+                <SelectValue placeholder="Responsável" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-[10px] font-bold">Todos Responsáveis</SelectItem>
+                {users.map(u => (
+                  <SelectItem key={u.id} value={u.id} className="text-[10px] font-bold">
+                    {u.name.split(' ')[0]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="hidden sm:block h-6 w-px bg-zinc-200 mx-1" />
+
+          <div className="hidden md:flex flex-col items-end pr-4 shrink-0">
             <span className="text-xs font-semibold text-zinc-900 tracking-tight">{user?.name}</span>
             <span className="text-[9px] text-zinc-400 uppercase tracking-widest font-bold">{user?.role}</span>
           </div>
-          <Button variant="ghost" size="sm" className="h-8 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-full px-3 sm:px-4 text-xs font-semibold" onClick={() => logout()}>
+          <Button variant="ghost" size="sm" className="h-8 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg px-2 sm:px-3 text-xs font-semibold shrink-0" onClick={() => logout()}>
             Sair
           </Button>
         </div>

@@ -6,7 +6,8 @@ import { METHODOLOGY_INFO } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
-import { FolderKanban, ListTodo, CheckCircle2, Clock, TrendingUp, Sparkles } from 'lucide-react'
+import { FolderKanban, ListTodo, CheckCircle2, Clock, TrendingUp, Sparkles, Users } from 'lucide-react'
+import { UserAvatar } from './user-avatar'
 
 interface DashboardProps {
   onNewProject: () => void
@@ -241,9 +242,33 @@ export function Dashboard({ onNewProject }: DashboardProps) {
                             </span>
                           )}
                         </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Progresso</span>
-                          <span className="font-bold text-foreground">{Math.round(progress)}%</span>
+                        
+                        <div className="relative">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Progresso</span>
+                            <span className="font-bold text-foreground">{Math.round(progress)}%</span>
+                          </div>
+                          <Progress value={progress} className="h-1" />
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-border/10">
+                           <div className="flex items-center gap-2">
+                             <UserAvatar 
+                               name={useProjectStore.getState().users.find(u => u.id === project.ownerId)?.name || 'Owner'} 
+                               role="Project Owner"
+                               size="xs"
+                             />
+                             <span className="text-[10px] font-bold text-muted-foreground truncate max-w-[80px]">
+                               {useProjectStore.getState().users.find(u => u.id === project.ownerId)?.name.split(' ')[0] || 'Dono'}
+                             </span>
+                           </div>
+                           
+                           {Array.isArray(project.stakeholderIds) && project.stakeholderIds.length > 0 && (
+                             <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground/60">
+                               <Users className="h-2.5 w-2.5" />
+                               <span>{project.stakeholderIds.length}</span>
+                             </div>
+                           )}
                         </div>
                       </div>
                     </CardContent>

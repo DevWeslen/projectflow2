@@ -23,7 +23,9 @@ import {
 } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Badge } from '@/components/ui/badge'
-import { CalendarDays, Zap } from 'lucide-react'
+import { CalendarDays, Zap, Plus, Trash2, Check, User, Users, Link as LinkIcon, FileUp } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { AttachmentPromptDialog } from './attachment-prompt-dialog'
 
 interface TaskFormDialogProps {
   open: boolean
@@ -42,14 +44,23 @@ export function TaskFormDialog({
   editTask,
   methodology = 'kanban',
 }: TaskFormDialogProps) {
-  const { addTask, updateTask, tasks } = useProjectStore()
-  
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState<TaskStatus>('todo')
   const [progress, setProgress] = useState(0)
   const [deadline, setDeadline] = useState('')
   const [sprint, setSprint] = useState<number | undefined>(undefined)
+  const [ownerId, setOwnerId] = useState<string>('')
+  const [stakeholderIds, setStakeholderIds] = useState<string[]>([])
+  const [attachments, setAttachments] = useState<any[]>([])
+  const [newAttachmentName, setNewAttachmentName] = useState('')
+  const [newAttachmentUrl, setNewAttachmentUrl] = useState('')
+  const [showAttachmentInput, setShowAttachmentInput] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [showCompletionPrompt, setShowCompletionPrompt] = useState(false)
+  const [pendingTaskData, setPendingTaskData] = useState<any>(null)
+
+  const { addTask, updateTask, tasks, users, user: currentUser } = useProjectStore()
 
   // Get parent task name for context
   const parentTask = parentId ? tasks.find(t => t.id === parentId) : null
@@ -65,6 +76,9 @@ export function TaskFormDialog({
       setProgress(editTask.progress)
       setDeadline(editTask.deadline ? new Date(editTask.deadline).toISOString().split('T')[0] : '')
       setSprint(editTask.sprint)
+      setOwnerId(editTask.ownerId || '')
+      setStakeholderIds(editTask.stakeholderIds || [])
+      setAttachments(editTask.attachments || [])
     } else {
       setTitle('')
       setDescription('')
@@ -72,8 +86,11 @@ export function TaskFormDialog({
       setProgress(0)
       setDeadline('')
       setSprint(undefined)
+      setOwnerId(currentUser?.id || '')
+      setStakeholderIds([])
+      setAttachments([])
     }
-  }, [editTask, open])
+  }, [editTask, open, currentUser])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -92,6 +109,21 @@ export function TaskFormDialog({
       taskData.sprint = sprint
     }
 
+    taskData.ownerId = ownerId
+    taskData.stakeholderIds = stakeholderIds
+    taskData.attachments = attachments
+
+    const isCompleting = taskData.status === 'done' || taskData.progress === 100
+    if (isCompleting && attachments.length === 0) {
+      setPendingTaskData(taskData)
+      setShowCompletionPrompt(true)
+      return
+    }
+
+    finalizeSave(taskData)
+  }
+
+  const finalizeSave = (taskData: any) => {
     if (editTask) {
       updateTask(editTask.id, taskData)
     } else {
@@ -101,9 +133,24 @@ export function TaskFormDialog({
         projectId
       })
     }
-
     resetForm()
     onOpenChange(false)
+  }
+
+  const handlePromptConfirm = (attachment?: { name: string; url: string; type: 'link' | 'file' }) => {
+    if (pendingTaskData) {
+      const finalData = { ...pendingTaskData }
+      if (attachment) {
+        finalData.attachments = [...(finalData.attachments || []), {
+          id: generateId(),
+          ...attachment,
+          createdAt: new Date()
+        }]
+      }
+      finalizeSave(finalData)
+      setShowCompletionPrompt(false)
+      setPendingTaskData(null)
+    }
   }
 
   const resetForm = () => {
@@ -113,6 +160,67 @@ export function TaskFormDialog({
     setProgress(0)
     setDeadline('')
     setSprint(undefined)
+    setOwnerId('')
+    setStakeholderIds([])
+    setAttachments([])
+    setNewAttachmentName('')
+    setNewAttachmentUrl('')
+    setShowAttachmentInput(false)
+  }
+
+  const generateId = () => Math.random().toString(36).substring(2, 11)
+
+  const handleAddAttachment = () => {
+    if (!newAttachmentName.trim() || !newAttachmentUrl.trim()) return
+    setAttachments(prev => [...prev, { 
+      id: generateId(),
+      name: newAttachmentName.trim(), 
+      url: newAttachmentUrl.trim(),
+      type: 'link',
+      createdAt: new Date()
+    }])
+    setNewAttachmentName('')
+    setNewAttachmentUrl('')
+    setShowAttachmentInput(false)
+  }
+
+  const handleRemoveAttachment = (id: string) => {
+    setAttachments(prev => prev.filter(at => at.id !== id))
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setAttachments(prev => [...prev, {
+          id: generateId(),
+          name: data.name,
+          url: data.url,
+          type: 'file',
+          createdAt: new Date()
+        }])
+        setShowAttachmentInput(false)
+      } else {
+        alert('Erro ao fazer upload do arquivo')
+      }
+    } catch (error) {
+      console.error('Error uploading:', error)
+      alert('Erro de conexão ao fazer upload')
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const handleStatusChange = (newStatus: TaskStatus) => {
@@ -230,6 +338,135 @@ export function TaskFormDialog({
             </div>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border/20 pt-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                <User className="h-3 w-3" /> Responsável
+              </label>
+              <Select value={ownerId} onValueChange={setOwnerId}>
+                <SelectTrigger className="bg-background/50 border-border/50 font-bold">
+                  <SelectValue placeholder="Selecionar..." />
+                </SelectTrigger>
+                <SelectContent className="glass">
+                  {users.map(u => (
+                    <SelectItem key={u.id} value={u.id} className="font-medium">
+                      {u.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                <Users className="h-3 w-3" /> Stakeholders
+              </label>
+              <div className="flex flex-wrap gap-1.5 p-2 rounded-md bg-background/50 border border-border/50 min-h-[40px]">
+                {users.map(u => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => {
+                      setStakeholderIds(prev => 
+                        prev.includes(u.id) 
+                          ? prev.filter(id => id !== u.id) 
+                          : [...prev, u.id]
+                      )
+                    }}
+                    className={cn(
+                      "group flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all",
+                      stakeholderIds.includes(u.id)
+                        ? "bg-[#006838] text-white border-[#006838]"
+                        : "bg-secondary/50 border-border text-muted-foreground hover:border-[#006838]/50"
+                    )}
+                  >
+                    {u.name}
+                    {stakeholderIds.includes(u.id) && <Check className="h-2 w-2" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2 border-t border-border/20 pt-4">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                <LinkIcon className="h-3 w-3" /> Anexos / Evidências
+              </label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[10px] gap-1 text-primary hover:bg-primary/10"
+                onClick={() => setShowAttachmentInput(!showAttachmentInput)}
+              >
+                <Plus className="h-3 w-3" /> Adicionar
+              </Button>
+            </div>
+
+            {showAttachmentInput && (
+              <div className="p-3 rounded-lg bg-secondary/20 border border-border/50 space-y-3">
+                <div className="flex flex-col gap-2">
+                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Anexar Via Link</label>
+                   <div className="grid grid-cols-2 gap-2">
+                    <Input placeholder="Nome (ex: Comprovante)" value={newAttachmentName} onChange={e => setNewAttachmentName(e.target.value)} className="h-8 text-xs font-bold" />
+                    <Input placeholder="URL do arquivo" value={newAttachmentUrl} onChange={e => setNewAttachmentUrl(e.target.value)} className="h-8 text-xs font-bold" />
+                  </div>
+                  <Button type="button" size="sm" onClick={handleAddAttachment} disabled={!newAttachmentName.trim() || !newAttachmentUrl.trim()} className="h-7 text-xs bg-primary w-full">
+                    Adicionar Link
+                  </Button>
+                </div>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border/50" />
+                  </div>
+                  <div className="relative flex justify-center text-[8px] uppercase">
+                    <span className="bg-background px-2 text-muted-foreground font-bold italic">ou clique abaixo para upload</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                   <div 
+                    className={cn(
+                      "group border-2 border-dashed border-primary/20 rounded-lg p-3 py-4 flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-primary/5 hover:border-primary/40 transition-all",
+                      isUploading && "opacity-50 pointer-events-none"
+                    )}
+                    onClick={() => document.getElementById('task-file-upload')?.click()}
+                   >
+                     <FileUp className="h-5 w-5 text-primary" />
+                     <span className="text-[10px] font-bold text-primary">
+                       {isUploading ? 'Enviando...' : 'Selecionar Arquivo do PC'}
+                     </span>
+                     <input 
+                       id="task-file-upload" 
+                       type="file" 
+                       className="hidden" 
+                       onChange={handleFileUpload} 
+                     />
+                   </div>
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setShowAttachmentInput(false)} className="h-7 text-xs text-muted-foreground">Fechar</Button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              {attachments.map((at) => (
+                <div key={at.id} className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-600 rounded-md px-2 py-1 text-[10px] font-bold">
+                  <a href={at.url} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1">
+                    <LinkIcon className="h-2.5 w-2.5" /> {at.name}
+                  </a>
+                  <button type="button" onClick={() => handleRemoveAttachment(at.id)} className="text-destructive/70 hover:text-destructive ml-1">
+                    <Trash2 className="h-2.5 w-2.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 rounded-2xl bg-secondary/20 border border-border/50">
             {/* Status field — hidden for Kanban (auto-calculated) */}
             {isKanban ? (
@@ -301,6 +538,13 @@ export function TaskFormDialog({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      <AttachmentPromptDialog 
+        open={showCompletionPrompt}
+        onOpenChange={setShowCompletionPrompt}
+        taskTitle={title}
+        onConfirm={handlePromptConfirm}
+      />
     </Dialog>
   )
 }

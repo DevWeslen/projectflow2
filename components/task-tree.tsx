@@ -19,7 +19,11 @@ import {
   Circle,
   CalendarDays,
   Zap,
+  Users,
+  Paperclip
 } from 'lucide-react'
+import { UserAvatar } from './user-avatar'
+import { AttachmentPromptDialog } from './attachment-prompt-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,12 +43,14 @@ import { Slider } from '@/components/ui/slider'
 interface TaskNodeProps {
   task: Task
   level: number
+  editTask?: Task | null
   onAddSubtask: (parentId: string) => void
   onEditTask: (task: Task) => void
+  onCompleteWithAttachment: (task: Task, update: Partial<Task>) => void
 }
 
-function TaskNode({ task, level, onAddSubtask, onEditTask }: TaskNodeProps) {
-  const { getChildTasks, updateTask, deleteTask, calculateTaskProgress } = useProjectStore()
+function TaskNode({ task, level, onAddSubtask, onEditTask, onCompleteWithAttachment }: TaskNodeProps) {
+  const { getChildTasks, updateTask, deleteTask, calculateTaskProgress, users } = useProjectStore()
   const [isExpanded, setIsExpanded] = useState(true)
   
   const children = getChildTasks(task.id)
@@ -57,7 +63,7 @@ function TaskNode({ task, level, onAddSubtask, onEditTask }: TaskNodeProps) {
     if (isDone) {
       updateTask(task.id, { status: 'todo', progress: 0 })
     } else {
-      updateTask(task.id, { status: 'done', progress: 100 })
+      onCompleteWithAttachment(task, { status: 'done', progress: 100 })
     }
   }
 
@@ -73,7 +79,8 @@ function TaskNode({ task, level, onAddSubtask, onEditTask }: TaskNodeProps) {
     let status: TaskStatus = task.status
     
     if (progress === 100) {
-      status = 'done'
+      onCompleteWithAttachment(task, { progress, status: 'done' })
+      return
     } else if (progress === 0) {
       status = 'todo'
     } else if (task.status === 'todo' || task.status === 'done') {
@@ -141,6 +148,38 @@ function TaskNode({ task, level, onAddSubtask, onEditTask }: TaskNodeProps) {
               <span className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
                 Macro
               </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <UserAvatar 
+              name={users.find(u => u.id === task.ownerId)?.name || 'Owner'} 
+              role="Responsável"
+              size="xs"
+              className="opacity-80"
+            />
+            {Array.isArray(task.stakeholderIds) && task.stakeholderIds.length > 0 && (
+              <div className="flex items-center gap-0.5 text-[9px] font-bold text-muted-foreground/40">
+                <Users className="h-2.5 w-2.5" />
+                <span>{task.stakeholderIds.length}</span>
+              </div>
+            )}
+            
+            {Array.isArray(task.attachments) && task.attachments.length > 0 && (
+              <div className="flex items-center gap-1">
+                {task.attachments.map((at: any) => (
+                  <a 
+                    key={at.id}
+                    href={at.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500/60 hover:text-blue-500 transition-colors"
+                    title={at.name}
+                  >
+                    <Paperclip className="h-3 w-3" />
+                  </a>
+                ))}
+              </div>
             )}
           </div>
           
@@ -252,6 +291,7 @@ function TaskNode({ task, level, onAddSubtask, onEditTask }: TaskNodeProps) {
               level={level + 1}
               onAddSubtask={onAddSubtask}
               onEditTask={onEditTask}
+              onCompleteWithAttachment={onCompleteWithAttachment}
             />
           ))}
         </div>
@@ -267,8 +307,31 @@ interface TaskTreeProps {
 }
 
 export function TaskTree({ projectId, onAddTask, onEditTask }: TaskTreeProps) {
-  const { getRootTasks } = useProjectStore()
+  const { getRootTasks, updateTask } = useProjectStore()
+  const [completionPromptInfo, setCompletionPromptInfo] = useState<{ task: Task, update: Partial<Task> } | null>(null)
   const rootTasks = getRootTasks(projectId)
+
+  const handleCompleteWithAttachment = (task: Task, update: Partial<Task>) => {
+    setCompletionPromptInfo({ task, update })
+  }
+
+  const handleAttachmentConfirm = (attachment?: { name: string; url: string; type: 'link' | 'file' }) => {
+    if (completionPromptInfo) {
+      const { task, update } = completionPromptInfo
+      const finalUpdates = { ...update }
+      
+      if (attachment) {
+        finalUpdates.attachments = [...(task.attachments || []), { 
+          id: Math.random().toString(36).substring(2, 11),
+          ...attachment,
+          createdAt: new Date()
+        }]
+      }
+      
+      updateTask(task.id, finalUpdates)
+      setCompletionPromptInfo(null)
+    }
+  }
 
   if (rootTasks.length === 0) {
     return (
@@ -299,8 +362,18 @@ export function TaskTree({ projectId, onAddTask, onEditTask }: TaskTreeProps) {
           level={0}
           onAddSubtask={onAddTask}
           onEditTask={onEditTask}
+          onCompleteWithAttachment={handleCompleteWithAttachment}
         />
       ))}
+
+      {completionPromptInfo && (
+        <AttachmentPromptDialog 
+          open={!!completionPromptInfo}
+          onOpenChange={(open) => !open && setCompletionPromptInfo(null)}
+          taskTitle={completionPromptInfo.task.title}
+          onConfirm={handleAttachmentConfirm}
+        />
+      )}
     </div>
   )
 }

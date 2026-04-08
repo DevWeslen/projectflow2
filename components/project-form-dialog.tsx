@@ -42,6 +42,11 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
   const [sprintDuration, setSprintDuration] = useState('2')
   const [totalSprints, setTotalSprints] = useState('4')
   const [memberIds, setMemberIds] = useState<string[]>([])
+  const [stakeholderIds, setStakeholderIds] = useState<string[]>([])
+  const [attachments, setAttachments] = useState<any[]>([])
+  const [newAttachmentName, setNewAttachmentName] = useState('')
+  const [newAttachmentUrl, setNewAttachmentUrl] = useState('')
+  const [showAttachmentInput, setShowAttachmentInput] = useState(false)
 
   // Initial KPIs
   const [kpis, setKpis] = useState<KPI[]>([])
@@ -55,6 +60,22 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
   const startYear = new Date().getFullYear()
   const endYear = deadline ? new Date(deadline).getFullYear() : startYear
   const numYears = Math.max(1, endYear - startYear + 1)
+
+  const handleAddAttachment = () => {
+    if (!newAttachmentName.trim() || !newAttachmentUrl.trim()) return
+    setAttachments(prev => [...prev, { 
+      id: generateId(),
+      name: newAttachmentName.trim(), 
+      url: newAttachmentUrl.trim(),
+      type: 'link',
+      createdAt: new Date()
+    }])
+    setNewAttachmentName('')
+    setNewAttachmentUrl('')
+    setShowAttachmentInput(false)
+  }
+
+  const handleRemoveAttachment = (index: number) => setAttachments(prev => prev.filter((_, i) => i !== index))
 
   const handleAddKpi = () => {
     if (!kpiName.trim() || !kpiTarget) return
@@ -93,7 +114,9 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
       generalKpis: kpis,
       yearlyGoals: undefined as any, // store will auto-generate
       ownerId: currentUser?.id || 'system',
-      memberIds: [currentUser?.id || 'system', ...memberIds]
+      memberIds: [currentUser?.id || 'system', ...memberIds],
+      stakeholderIds: stakeholderIds,
+      attachments: attachments
     })
 
     resetForm()
@@ -116,6 +139,11 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
     setKpiAggregation('sum')
     setKpiDistribution('fraction')
     setMemberIds([])
+    setStakeholderIds([])
+    setAttachments([])
+    setNewAttachmentName('')
+    setNewAttachmentUrl('')
+    setShowAttachmentInput(false)
     setShowKpiInput(false)
   }
 
@@ -280,37 +308,106 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
             </div>
           </div>
 
-          {/* Members Selection */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground uppercase">Membros com Acesso</label>
-            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 rounded-xl bg-secondary/20 border border-border/50">
-              {users.filter(u => u.id !== currentUser?.id).map((u) => (
-                <button
-                  key={u.id}
-                  type="button"
-                  onClick={() => {
-                    setMemberIds(prev => 
-                      prev.includes(u.id) 
-                        ? prev.filter(id => id !== u.id) 
-                        : [...prev, u.id]
-                    )
-                  }}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all border",
-                    memberIds.includes(u.id)
-                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                      : "bg-background/50 border-border/50 text-muted-foreground hover:border-primary/50"
-                  )}
-                >
-                  {u.name}
-                  {memberIds.includes(u.id) && <Check className="h-3 w-3" />}
-                </button>
-              ))}
-              {users.filter(u => u.id !== currentUser?.id).length === 0 && (
-                <p className="text-[10px] text-muted-foreground italic p-1">Nenhum outro usuário cadastrado para seleção.</p>
-              )}
+          {/* Members & Stakeholders Selection */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground uppercase">Equipe do Projeto</label>
+              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 rounded-xl bg-secondary/20 border border-border/50">
+                {users.filter(u => u.id !== currentUser?.id).map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => {
+                      setMemberIds(prev => 
+                        prev.includes(u.id) 
+                          ? prev.filter(id => id !== u.id) 
+                          : [...prev, u.id]
+                      )
+                    }}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all border",
+                      memberIds.includes(u.id)
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                        : "bg-background/50 border-border/50 text-muted-foreground hover:border-primary/50"
+                    )}
+                  >
+                    {u.name}
+                    {memberIds.includes(u.id) && <Check className="h-3 w-3" />}
+                  </button>
+                ))}
+              </div>
             </div>
-            <p className="text-[9px] text-muted-foreground font-medium italic">Nota: Você (criador), Admin, Conselho e Diretoria sempre terão acesso aos projetos.</p>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground uppercase">Stakeholders (Interessados)</label>
+              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 rounded-xl bg-secondary/20 border border-border/50">
+                {users.map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => {
+                      setStakeholderIds(prev => 
+                        prev.includes(u.id) 
+                          ? prev.filter(id => id !== u.id) 
+                          : [...prev, u.id]
+                      )
+                    }}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all border",
+                      stakeholderIds.includes(u.id)
+                        ? "bg-[#006838] text-white border-[#006838] shadow-sm"
+                        : "bg-background/50 border-border/50 text-muted-foreground hover:border-[#006838]/50"
+                    )}
+                  >
+                    {u.name}
+                    {stakeholderIds.includes(u.id) && <Check className="h-3 w-3" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Anexos / Evidências</label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 text-xs gap-1 text-primary hover:text-primary hover:bg-primary/10"
+                onClick={() => setShowAttachmentInput(!showAttachmentInput)}
+              >
+                <Plus className="h-3 w-3" /> Anexo
+              </Button>
+            </div>
+
+            {showAttachmentInput && (
+              <div className="p-3 rounded-xl bg-secondary/20 border border-border/50 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="Nome do Anexo (ex: Escopo)" value={newAttachmentName} onChange={e => setNewAttachmentName(e.target.value)} className="h-8 text-xs font-bold" />
+                  <Input placeholder="Link/URL do arquivo" value={newAttachmentUrl} onChange={e => setNewAttachmentUrl(e.target.value)} className="h-8 text-xs font-bold" />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setShowAttachmentInput(false)}>Cancelar</Button>
+                  <Button type="button" size="sm" onClick={handleAddAttachment} disabled={!newAttachmentName.trim() || !newAttachmentUrl.trim()} className="bg-primary h-7 text-xs">
+                    <Check className="h-3 w-3 mr-1" /> Adicionar
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {attachments.map((at, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-600 rounded-lg px-2 py-1 text-[10px] font-bold">
+                    <span>{at.name}</span>
+                    <button type="button" onClick={() => handleRemoveAttachment(idx)} className="text-destructive/70 hover:text-destructive ml-0.5">
+                      <Trash2 className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Methodology Selection */}

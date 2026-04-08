@@ -40,6 +40,14 @@ export interface YearlyGoal {
   kpis: KPI[]
 }
 
+export interface Attachment {
+  id: string
+  name: string
+  url: string
+  type: string
+  createdAt: Date
+}
+
 export interface Task {
   id: string
   title: string
@@ -48,6 +56,11 @@ export interface Task {
   progress: number // 0-100
   parentId: string | null // null = é uma tarefa raiz (macro)
   projectId: string
+  ownerId?: string
+  stakeholderIds?: string[]
+  attachments?: Attachment[]
+  actualStartDate?: Date
+  actualEndDate?: Date
   createdAt: Date
   updatedAt: Date
   order: number
@@ -61,14 +74,18 @@ export interface Project {
   description?: string
   methodology: Methodology
   color: string
+  ownerId: string
+  memberIds: string[]
+  stakeholderIds?: string[]
+  attachments?: Attachment[]
+  actualStartDate?: Date
+  actualEndDate?: Date
   createdAt: Date
   updatedAt: Date
   category: string
   generalKpis: KPI[]
   yearlyGoals: YearlyGoal[]
   deadline?: Date
-  ownerId: string
-  memberIds: string[]
   // Scrum specific settings
   sprintDuration?: number // in weeks
   totalSprints?: number

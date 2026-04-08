@@ -18,7 +18,11 @@ import {
   Circle,
   CalendarDays,
   Zap,
+  Users,
+  Paperclip
 } from 'lucide-react'
+import { UserAvatar } from './user-avatar'
+import { AttachmentPromptDialog } from './attachment-prompt-dialog'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -32,10 +36,11 @@ interface KanbanCardProps {
   task: Task
   onEdit: (task: Task) => void
   onAddSubtask: (parentId: string) => void
+  onCompleteWithAttachment: (task: Task, update: Partial<Task>) => void
 }
 
-function KanbanCard({ task, onEdit, onAddSubtask }: KanbanCardProps) {
-  const { calculateTaskProgress, deleteTask, getChildTasks, updateTask } = useProjectStore()
+function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment }: KanbanCardProps) {
+  const { calculateTaskProgress, deleteTask, getChildTasks, updateTask, users } = useProjectStore()
   const [isExpanded, setIsExpanded] = useState(false)
   const progress = calculateTaskProgress(task.id)
   const children = getChildTasks(task.id)
@@ -45,7 +50,7 @@ function KanbanCard({ task, onEdit, onAddSubtask }: KanbanCardProps) {
     if (isDone) {
       updateTask(task.id, { status: 'todo', progress: 0 })
     } else {
-      updateTask(task.id, { status: 'done', progress: 100 })
+      onCompleteWithAttachment(task, { status: 'done', progress: 100 })
     }
   }
 
@@ -143,6 +148,54 @@ function KanbanCard({ task, onEdit, onAddSubtask }: KanbanCardProps) {
           <Progress value={progress} className="h-1 rounded-full bg-secondary" />
         </div>
 
+        {/* Card Footer: Owner & Stakeholders */}
+        <div className="flex items-center justify-between pt-2 border-t border-border/10">
+          <div className="flex items-center gap-1.5">
+            <UserAvatar 
+              name={users.find(u => u.id === task.ownerId)?.name || 'Owner'} 
+              role="Responsável"
+              size="xs"
+              className="opacity-80"
+            />
+            <span className="text-[10px] font-bold text-muted-foreground truncate max-w-[80px]">
+              {users.find(u => u.id === task.ownerId)?.name.split(' ')[0] || 'Dono'}
+            </span>
+          </div>
+          
+          {Array.isArray(task.stakeholderIds) && task.stakeholderIds.length > 0 && (
+            <div className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground/40">
+              <Users className="h-2.5 w-2.5" />
+              <span>{task.stakeholderIds.length}</span>
+            </div>
+          )}
+          
+          {Array.isArray(task.attachments) && task.attachments.length > 0 && (
+            <div className="flex items-center gap-1 text-[9px] font-bold text-blue-500/60">
+              <Paperclip className="h-2.5 w-2.5" />
+              <span>{task.attachments.length}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Attachment Links (Inline Visibility) */}
+        {Array.isArray(task.attachments) && task.attachments.length > 0 && (
+          <div className="pt-2 flex flex-wrap gap-2">
+            {task.attachments.map((at: any) => (
+              <a 
+                key={at.id} 
+                href={at.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 text-[8px] font-bold text-blue-600 transition-colors"
+                title={at.name}
+              >
+                <Paperclip className="h-2 w-2" />
+                <span className="truncate max-w-[60px]">{at.name}</span>
+              </a>
+            ))}
+          </div>
+        )}
+
         {/* Subtasks (Micros) Area */}
         {isExpanded && children.length > 0 && (
           <div className="pt-3 border-t border-border/20 space-y-3 animate-in-fade">
@@ -206,8 +259,32 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ projectId, onAddTask, onEditTask }: KanbanBoardProps) {
-  const { getProjectTasks } = useProjectStore()
+  const { getProjectTasks, updateTask } = useProjectStore()
+  const [completionPromptInfo, setCompletionPromptInfo] = useState<{ task: Task, update: Partial<Task> } | null>(null)
+  
   const allTasks = getProjectTasks(projectId)
+
+  const handleCompleteWithAttachment = (task: Task, update: Partial<Task>) => {
+    setCompletionPromptInfo({ task, update })
+  }
+
+  const handleAttachmentConfirm = (attachment?: { name: string; url: string; type: 'link' | 'file' }) => {
+    if (completionPromptInfo) {
+      const { task, update } = completionPromptInfo
+      const finalUpdates = { ...update }
+      
+      if (attachment) {
+        finalUpdates.attachments = [...(task.attachments || []), { 
+          id: Math.random().toString(36).substring(2, 11),
+          ...attachment,
+          createdAt: new Date()
+        }]
+      }
+      
+      updateTask(task.id, finalUpdates)
+      setCompletionPromptInfo(null)
+    }
+  }
   
   // No Kanban, geralmente mostramos as tarefas de nível superior, 
   // ou todas se quisermos uma visão plana. Para o usuário ver "Macros", 
@@ -270,6 +347,7 @@ export function KanbanBoard({ projectId, onAddTask, onEditTask }: KanbanBoardPro
                     task={task} 
                     onEdit={onEditTask} 
                     onAddSubtask={onAddTask} 
+                    onCompleteWithAttachment={handleCompleteWithAttachment}
                   />
                 ))
               )}
@@ -277,6 +355,15 @@ export function KanbanBoard({ projectId, onAddTask, onEditTask }: KanbanBoardPro
           </div>
         )
       })}
+
+      {completionPromptInfo && (
+        <AttachmentPromptDialog 
+          open={!!completionPromptInfo}
+          onOpenChange={(open) => !open && setCompletionPromptInfo(null)}
+          taskTitle={completionPromptInfo.task.title}
+          onConfirm={handleAttachmentConfirm}
+        />
+      )}
     </div>
   )
 }
