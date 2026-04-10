@@ -182,7 +182,7 @@ export function MonthlyKpiDialog({ editingMonthly, setEditingMonthly, onSave }: 
 
                   {/* Realizado */}
                   <div className="text-right">
-                    <p className="text-[9px] font-black text-[#006838] uppercase tracking-widest">Realizado {editingMonthly.aggregation === 'sum' ? 'Total' : 'Médio'}</p>
+                    <p className="text-[9px] font-black text-[#006838] uppercase tracking-widest">Realizado {editingMonthly.aggregation === 'sum' ? 'Anual' : 'Mensal'}</p>
                     <p className="text-lg font-black text-[#006838] leading-none mt-1">{finalCurrent.toLocaleString('pt-BR')} <span className="text-xs">{editingMonthly.unit}</span></p>
                   </div>
                 </div>
@@ -210,7 +210,7 @@ export function MonthlyKpiDialog({ editingMonthly, setEditingMonthly, onSave }: 
                 <Check className="w-3.5 h-3.5" /> O Cálculo Automático
               </h4>
               <p className="text-sm font-medium text-slate-600 mt-2">
-                O "Realizado" no total anual passará a ser obrigatoriamente a {editingMonthly.aggregation === 'sum' ? 'SOMA' : 'MÉDIA'} exata dos meses preenchidos acima. Ao salvar, fecharemos aquela digitação manual por cima!
+                O "Realizado" passará a ser obrigatoriamente o valor {editingMonthly.aggregation === 'sum' ? 'ANUAL (SOMA)' : 'MENSAL (MÉDIA)'} exato dos meses preenchidos acima. Ao salvar, atualizaremos o valor consolidado automaticamente!
               </p>
             </div>
           </div>

@@ -382,7 +382,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                   {(['sum', 'average'] as const).map(m => (
                     <button key={m} onClick={() => setNewKpiAggregation(m)}
                       className={`flex-1 rounded-lg text-xs font-black transition-all border-2 ${newKpiAggregation === m ? 'bg-[#006838]/10 text-[#006838] border-[#006838]' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
-                      {m === 'sum' ? '∑ Soma' : '⌀ Média'}
+                      {m === 'sum' ? '∑ Anual' : '⌀ Mensal'}
                     </button>
                   ))}
                 </div>
@@ -473,7 +473,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                               {(['sum', 'average'] as const).map(m => (
                                 <button key={m} onClick={() => setEditingGeneral({ ...editingGeneral, aggregation: m })}
                                   className={`flex-1 h-9 rounded-md text-[10px] font-black transition-all ${editingGeneral.aggregation === m ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                                  {m === 'sum' ? '∑ Soma Geral' : '⌀ Tirar Média'}
+                                  {m === 'sum' ? '∑ Anual Geral' : '⌀ Mensal Geral'}
                                 </button>
                               ))}
                             </div>
@@ -515,7 +515,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                         <div className="space-y-1">
                           <h4 className="font-black text-lg leading-tight drop-shadow-sm pr-6 leading-tight max-w-[90%]">{kpi.name}</h4>
                           <span className="inline-flex py-0.5 px-2 bg-black/20 font-bold text-[9px] rounded-full uppercase tracking-widest backdrop-blur-sm shadow-inner">
-                            {kpi.aggregation === 'sum' ? 'Acumulativo' : 'Média Geral'}
+                            {kpi.aggregation === 'sum' ? 'Consolidado Anual' : 'Acompanhamento Mensal'}
                           </span>
                         </div>
                         

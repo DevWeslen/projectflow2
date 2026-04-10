@@ -6,7 +6,7 @@ import { METHODOLOGY_INFO } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
-import { FolderKanban, ListTodo, CheckCircle2, Clock, TrendingUp, Sparkles, Users } from 'lucide-react'
+import { FolderKanban, ListTodo, CheckCircle2, Clock, TrendingUp, Users } from 'lucide-react'
 import { UserAvatar } from './user-avatar'
 
 interface DashboardProps {
@@ -19,7 +19,6 @@ export function Dashboard({ onNewProject }: DashboardProps) {
     tasks, 
     calculateProjectProgress, 
     selectProject, 
-    seedExamples,
     user
   } = useProjectStore()
 
@@ -57,13 +56,6 @@ export function Dashboard({ onNewProject }: DashboardProps) {
             </p>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              onClick={() => seedExamples()}
-              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 border border-primary/20 text-primary rounded-full hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm font-medium glass"
-            >
-              <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="truncate">Gerar Demos</span>
-            </button>
             <button
               onClick={onNewProject}
               className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-all hover:scale-105 shadow-lg flex items-center justify-center gap-2 text-xs sm:text-sm font-medium"
@@ -178,13 +170,6 @@ export function Dashboard({ onNewProject }: DashboardProps) {
                   Organize seus fluxos de trabalho criando seu primeiro projeto agora mesmo.
                 </p>
                 <div className="flex items-center justify-center gap-4">
-                  <button
-                    onClick={() => seedExamples()}
-                    className="inline-flex items-center gap-2 px-8 py-3 border border-primary/20 text-primary rounded-full hover:bg-primary/5 transition-all font-bold glass"
-                  >
-                    <Sparkles className="h-5 w-5" />
-                    Gerar Exemplos
-                  </button>
                   <button
                     onClick={onNewProject}
                     className="inline-flex items-center gap-2 px-8 py-3 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-all hover:scale-105 shadow-xl font-bold"

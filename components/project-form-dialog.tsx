@@ -239,7 +239,7 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
                       <div className="flex gap-1 h-8">
                         {(['sum', 'average'] as const).map(m => (
                           <button key={m} type="button" onClick={() => setKpiAggregation(m)} className={`flex-1 h-8 rounded-md text-[10px] uppercase font-black tracking-tighter border transition-all ${kpiAggregation === m ? 'bg-primary text-primary-foreground border-primary' : 'bg-secondary/30 border-border text-muted-foreground'}`}>
-                            {m === 'sum' ? '∑ Soma' : '⌀ Média'}
+                            {m === 'sum' ? '∑ Anual' : '⌀ Mensal'}
                           </button>
                         ))}
                       </div>

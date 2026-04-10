@@ -426,7 +426,7 @@ export function ConsolidatedDashboard() {
                                 {kd.unit}
                               </Badge>
                               <Badge variant="secondary" className="text-[10px] font-black text-slate-500 bg-slate-100 uppercase tracking-widest px-2 py-0.5 rounded-md">
-                                {kd.aggregation === 'sum' ? '∑ Soma' : '⌀ Média'}
+                                {kd.aggregation === 'sum' ? '∑ Anual' : '⌀ Mensal'}
                               </Badge>
                             </div>
                           </div>
