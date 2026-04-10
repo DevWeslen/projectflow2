@@ -152,20 +152,20 @@ function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment }: Ka
         <div className="flex items-center justify-between pt-2 border-t border-border/10">
           <div className="flex items-center gap-1.5">
             <UserAvatar 
-              name={users.find(u => u.id === task.ownerId)?.name || 'Owner'} 
-              role="Responsável"
+              name={task.externalOwnerName || users.find(u => u.id === task.ownerId)?.name || 'Responsável'} 
+              role={task.externalOwnerName ? 'Externo' : 'Responsável'}
               size="xs"
               className="opacity-80"
             />
             <span className="text-[10px] font-bold text-muted-foreground truncate max-w-[80px]">
-              {users.find(u => u.id === task.ownerId)?.name.split(' ')[0] || 'Dono'}
+              {task.externalOwnerName ? task.externalOwnerName.split(' ')[0] : (users.find(u => u.id === task.ownerId)?.name.split(' ')[0] || 'Dono')}
             </span>
           </div>
           
-          {Array.isArray(task.stakeholderIds) && task.stakeholderIds.length > 0 && (
+          {((task.stakeholderIds?.length || 0) + (task.externalStakeholderNames?.length || 0)) > 0 && (
             <div className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground/40">
               <Users className="h-2.5 w-2.5" />
-              <span>{task.stakeholderIds.length}</span>
+              <span>{(task.stakeholderIds?.length || 0) + (task.externalStakeholderNames?.length || 0)}</span>
             </div>
           )}
           

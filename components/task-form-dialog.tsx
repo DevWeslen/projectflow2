@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { CalendarDays, Zap, Plus, Trash2, Check, User, Users, Link as LinkIcon, FileUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AttachmentPromptDialog } from './attachment-prompt-dialog'
@@ -51,7 +52,10 @@ export function TaskFormDialog({
   const [deadline, setDeadline] = useState('')
   const [sprint, setSprint] = useState<number | undefined>(undefined)
   const [ownerId, setOwnerId] = useState<string>('')
+  const [externalOwnerName, setExternalOwnerName] = useState('')
   const [stakeholderIds, setStakeholderIds] = useState<string[]>([])
+  const [externalStakeholderNames, setExternalStakeholderNames] = useState<string[]>([])
+  const [newExternalStakeholderName, setNewExternalStakeholderName] = useState('')
   const [attachments, setAttachments] = useState<any[]>([])
   const [newAttachmentName, setNewAttachmentName] = useState('')
   const [newAttachmentUrl, setNewAttachmentUrl] = useState('')
@@ -76,8 +80,10 @@ export function TaskFormDialog({
       setProgress(editTask.progress)
       setDeadline(editTask.deadline ? new Date(editTask.deadline).toISOString().split('T')[0] : '')
       setSprint(editTask.sprint)
-      setOwnerId(editTask.ownerId || '')
+      setOwnerId(editTask.ownerId || (editTask.externalOwnerName ? 'external' : ''))
+      setExternalOwnerName(editTask.externalOwnerName || '')
       setStakeholderIds(editTask.stakeholderIds || [])
+      setExternalStakeholderNames(editTask.externalStakeholderNames || [])
       setAttachments(editTask.attachments || [])
     } else {
       setTitle('')
@@ -87,7 +93,9 @@ export function TaskFormDialog({
       setDeadline('')
       setSprint(undefined)
       setOwnerId(currentUser?.id || '')
+      setExternalOwnerName('')
       setStakeholderIds([])
+      setExternalStakeholderNames([])
       setAttachments([])
     }
   }, [editTask, open, currentUser])
@@ -109,8 +117,10 @@ export function TaskFormDialog({
       taskData.sprint = sprint
     }
 
-    taskData.ownerId = ownerId
+    taskData.ownerId = ownerId === 'external' ? undefined : ownerId
+    taskData.externalOwnerName = ownerId === 'external' ? externalOwnerName.trim() : undefined
     taskData.stakeholderIds = stakeholderIds
+    taskData.externalStakeholderNames = externalStakeholderNames
     taskData.attachments = attachments
 
     const isCompleting = taskData.status === 'done' || taskData.progress === 100
@@ -161,7 +171,10 @@ export function TaskFormDialog({
     setDeadline('')
     setSprint(undefined)
     setOwnerId('')
+    setExternalOwnerName('')
     setStakeholderIds([])
+    setExternalStakeholderNames([])
+    setNewExternalStakeholderName('')
     setAttachments([])
     setNewAttachmentName('')
     setNewAttachmentUrl('')
@@ -259,27 +272,30 @@ export function TaskFormDialog({
       if (!value) resetForm()
       onOpenChange(value)
     }}>
-      <DialogContent className="sm:max-w-lg glass border-none shadow-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-black text-gradient">
-            {editTask ? 'Editar Tarefa' : parentId ? 'Nova Subtarefa' : 'Nova Tarefa Macro'}
-          </DialogTitle>
-          <DialogDescription className="font-medium text-muted-foreground/80">
-            {parentTask && (
-              <span>Organize a execução de: <strong className="text-foreground">{parentTask.title}</strong></span>
-            )}
-            {!parentTask && !editTask && (
-              <span>Defina uma nova etapa principal para a estrutura do seu projeto.</span>
-            )}
-            {editTask && <span>Ajuste os detalhes e acompanhe a evolução desta tarefa.</span>}
-          </DialogDescription>
-          <Badge variant="outline" className="w-fit mt-1 text-[9px] px-2 py-0.5 font-bold uppercase tracking-wider">
-            {methodologyInfo.icon} {methodologyInfo.name}
-          </Badge>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-lg glass border-none shadow-2xl p-0 overflow-hidden">
+        <div className="p-6 pb-2">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-gradient">
+              {editTask ? 'Editar Tarefa' : parentId ? 'Nova Subtarefa' : 'Nova Tarefa Macro'}
+            </DialogTitle>
+            <DialogDescription className="font-medium text-muted-foreground/80">
+              {parentTask && (
+                <span>Organize a execução de: <strong className="text-foreground">{parentTask.title}</strong></span>
+              )}
+              {!parentTask && !editTask && (
+                <span>Defina uma nova etapa principal para a estrutura do seu projeto.</span>
+              )}
+              {editTask && <span>Ajuste os detalhes e acompanhe a evolução desta tarefa.</span>}
+            </DialogDescription>
+            <Badge variant="outline" className="w-fit mt-1 text-[9px] px-2 py-0.5 font-bold uppercase tracking-wider">
+              {methodologyInfo.icon} {methodologyInfo.name}
+            </Badge>
+          </DialogHeader>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-          <div className="space-y-4">
+        <ScrollArea className="max-h-[70vh] px-6">
+          <form onSubmit={handleSubmit} className="space-y-6 py-4">
+            <div className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="title" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Título da Tarefa</label>
               <Input
@@ -353,9 +369,25 @@ export function TaskFormDialog({
                       {u.name}
                     </SelectItem>
                   ))}
+                  <SelectItem value="external" className="font-bold text-primary italic">
+                    Outro / Externo...
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {ownerId === 'external' && (
+              <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                <label className="text-[10px] font-black uppercase tracking-widest text-primary">Nome do Responsável Externo</label>
+                <Input
+                  value={externalOwnerName}
+                  onChange={(e) => setExternalOwnerName(e.target.value)}
+                  placeholder="Digite o nome..."
+                  className="bg-primary/5 border-primary/20 h-10 font-bold"
+                  required
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
@@ -384,6 +416,56 @@ export function TaskFormDialog({
                     {stakeholderIds.includes(u.id) && <Check className="h-2 w-2" />}
                   </button>
                 ))}
+
+                {/* External Stakeholders Badges */}
+                {externalStakeholderNames.map((name, idx) => (
+                  <div
+                    key={`ext-${idx}`}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-primary/10 border-primary/30 text-primary-foreground"
+                  >
+                    {name}
+                    <button
+                      type="button"
+                      onClick={() => setExternalStakeholderNames(prev => prev.filter((_, i) => i !== idx))}
+                      className="hover:text-destructive transition-colors"
+                    >
+                      <Trash2 className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add External Stakeholder Input */}
+              <div className="flex gap-2">
+                <Input
+                  value={newExternalStakeholderName}
+                  onChange={(e) => setNewExternalStakeholderName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      if (newExternalStakeholderName.trim()) {
+                        setExternalStakeholderNames(prev => [...prev, newExternalStakeholderName.trim()])
+                        setNewExternalStakeholderName('')
+                      }
+                    }
+                  }}
+                  placeholder="Novo Stakeholder Externo..."
+                  className="h-8 text-xs bg-background/30"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-8 px-3 text-[10px] font-bold"
+                  variant="outline"
+                  onClick={() => {
+                    if (newExternalStakeholderName.trim()) {
+                      setExternalStakeholderNames(prev => [...prev, newExternalStakeholderName.trim()])
+                      setNewExternalStakeholderName('')
+                    }
+                  }}
+                >
+                  <Plus className="h-3 w-3 mr-1" /> Add
+                </Button>
               </div>
             </div>
           </div>
@@ -519,24 +601,25 @@ export function TaskFormDialog({
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0 pt-2">
-            <Button 
-              type="button" 
-              variant="ghost" 
-              onClick={() => onOpenChange(false)}
-              className="font-bold text-muted-foreground"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={!title.trim()}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-black px-8 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105"
-            >
-              {editTask ? 'Salvar Alterações' : 'Criar Tarefa'}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter className="gap-2 sm:gap-0 pt-6 pb-6 border-t border-border/10 bg-background/50 sticky bottom-0">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                onClick={() => onOpenChange(false)}
+                className="font-bold text-muted-foreground"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={!title.trim() || (ownerId === 'external' && !externalOwnerName.trim())}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-black px-8 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105"
+              >
+                {editTask ? 'Salvar Alterações' : 'Criar Tarefa'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </ScrollArea>
       </DialogContent>
 
       <AttachmentPromptDialog 

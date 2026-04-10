@@ -153,15 +153,15 @@ function TaskNode({ task, level, onAddSubtask, onEditTask, onCompleteWithAttachm
 
           <div className="flex items-center gap-2">
             <UserAvatar 
-              name={users.find(u => u.id === task.ownerId)?.name || 'Owner'} 
-              role="Responsável"
+              name={task.externalOwnerName || users.find(u => u.id === task.ownerId)?.name || 'Responsável'} 
+              role={task.externalOwnerName ? 'Externo' : 'Responsável'}
               size="xs"
               className="opacity-80"
             />
-            {Array.isArray(task.stakeholderIds) && task.stakeholderIds.length > 0 && (
+            {((task.stakeholderIds?.length || 0) + (task.externalStakeholderNames?.length || 0)) > 0 && (
               <div className="flex items-center gap-0.5 text-[9px] font-bold text-muted-foreground/40">
                 <Users className="h-2.5 w-2.5" />
-                <span>{task.stakeholderIds.length}</span>
+                <span>{(task.stakeholderIds?.length || 0) + (task.externalStakeholderNames?.length || 0)}</span>
               </div>
             )}
             

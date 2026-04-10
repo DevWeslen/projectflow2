@@ -58,9 +58,11 @@ export interface Task {
   projectId: string
   ownerId?: string
   stakeholderIds?: string[]
+  externalStakeholderNames?: string[]
   attachments?: Attachment[]
   actualStartDate?: Date
   actualEndDate?: Date
+  externalOwnerName?: string
   createdAt: Date
   updatedAt: Date
   order: number
