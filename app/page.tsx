@@ -10,6 +10,7 @@ import { ProjectFormDialog } from '@/components/project-form-dialog'
 import { LoginScreen } from '@/components/login-screen'
 import { ConsolidatedDashboard } from '@/components/consolidated-dashboard'
 import { UserManagement } from '@/components/user-management'
+import { ErrorBoundary } from '@/components/error-boundary'
 
 export default function Home() {
   const { selectedProjectId, user, activeView } = useProjectStore()
@@ -32,15 +33,17 @@ export default function Home() {
     <SidebarProvider>
       <AppSidebar onNewProject={() => setProjectDialogOpen(true)} />
       <SidebarInset className="flex flex-col min-w-0 min-h-screen bg-background">
-        {activeView === 'users' ? (
-          <UserManagement />
-        ) : activeView === 'consolidated' ? (
-          <ConsolidatedDashboard />
-        ) : selectedProjectId ? (
-          <ProjectView projectId={selectedProjectId} />
-        ) : (
-          <Dashboard onNewProject={() => setProjectDialogOpen(true)} />
-        )}
+        <ErrorBoundary>
+          {activeView === 'users' ? (
+            <UserManagement />
+          ) : activeView === 'consolidated' ? (
+            <ConsolidatedDashboard />
+          ) : selectedProjectId ? (
+            <ProjectView projectId={selectedProjectId} />
+          ) : (
+            <Dashboard onNewProject={() => setProjectDialogOpen(true)} />
+          )}
+        </ErrorBoundary>
       </SidebarInset>
 
       <ProjectFormDialog

@@ -21,18 +21,28 @@ export async function GET() {
     const tasks = await prisma.task.findMany()
     const riskAnalyses = await prisma.riskAnalysis.findMany()
 
+    const safeParse = (str: string | null, fallback: any) => {
+      if (!str) return fallback
+      try {
+        return JSON.parse(str)
+      } catch (e) {
+        console.error("JSON parse error for:", str, e)
+        return fallback
+      }
+    }
+
     return NextResponse.json({
       users,
       projects: projects.map(p => ({
         ...p,
-        memberIds: JSON.parse(p.memberIds),
-        generalKpis: JSON.parse(p.generalKpis),
-        yearlyGoals: JSON.parse(p.yearlyGoals)
+        memberIds: safeParse(p.memberIds, []),
+        generalKpis: safeParse(p.generalKpis, []),
+        yearlyGoals: safeParse(p.yearlyGoals, [])
       })),
       tasks,
       riskAnalyses: riskAnalyses.map(r => ({
         ...r,
-        data: JSON.parse(r.data)
+        data: safeParse(r.data, {})
       }))
     })
   } catch (error) {

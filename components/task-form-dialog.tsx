@@ -78,7 +78,8 @@ export function TaskFormDialog({
       setDescription(editTask.description || '')
       setStatus(editTask.status)
       setProgress(editTask.progress)
-      setDeadline(editTask.deadline ? new Date(editTask.deadline).toISOString().split('T')[0] : '')
+      const deadlineDate = editTask.deadline ? new Date(editTask.deadline) : null
+      setDeadline(deadlineDate && !isNaN(deadlineDate.getTime()) ? deadlineDate.toISOString().split('T')[0] : '')
       setSprint(editTask.sprint)
       setOwnerId(editTask.ownerId || (editTask.externalOwnerName ? 'external' : ''))
       setExternalOwnerName(editTask.externalOwnerName || '')
