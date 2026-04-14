@@ -60,6 +60,8 @@ model Task {
   deadline    DateTime?
   actualStartDate DateTime?
   actualEndDate   DateTime?
+  externalOwnerName String?
+  externalStakeholderNames String? // JSON array of strings
   sprint      Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

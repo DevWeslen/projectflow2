@@ -7,6 +7,7 @@ export async function GET() {
     return NextResponse.json(tasks.map(t => ({
       ...t,
       stakeholderIds: t.stakeholderIds ? JSON.parse(t.stakeholderIds) : [],
+      externalStakeholderNames: t.externalStakeholderNames ? JSON.parse(t.externalStakeholderNames) : [],
       attachments: t.attachments ? JSON.parse(t.attachments) : []
     })))
   } catch (error) {
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
         parentId: data.parentId,
         ownerId: data.ownerId,
         stakeholderIds: JSON.stringify(data.stakeholderIds || []),
+        externalStakeholderNames: JSON.stringify(data.externalStakeholderNames || []),
         attachments: JSON.stringify(data.attachments || []),
         title: data.title,
         description: data.description,
@@ -33,12 +35,14 @@ export async function POST(request: Request) {
         deadline: data.deadline ? new Date(data.deadline) : null,
         actualStartDate: data.actualStartDate ? new Date(data.actualStartDate) : null,
         actualEndDate: data.actualEndDate ? new Date(data.actualEndDate) : null,
+        externalOwnerName: data.externalOwnerName,
         sprint: data.sprint
       }
     })
     return NextResponse.json({
       ...task,
       stakeholderIds: JSON.parse(task.stakeholderIds || '[]'),
+      externalStakeholderNames: JSON.parse(task.externalStakeholderNames || '[]'),
       attachments: JSON.parse(task.attachments || '[]')
     })
   } catch (error) {
@@ -54,6 +58,7 @@ export async function PUT(request: Request) {
 
     const updateData: any = { ...updates }
     if (updates.stakeholderIds) updateData.stakeholderIds = JSON.stringify(updates.stakeholderIds)
+    if (updates.externalStakeholderNames) updateData.externalStakeholderNames = JSON.stringify(updates.externalStakeholderNames)
     if (updates.attachments) updateData.attachments = JSON.stringify(updates.attachments)
     if (updates.deadline) updateData.deadline = new Date(updates.deadline)
     if (updates.actualStartDate) updateData.actualStartDate = new Date(updates.actualStartDate)
@@ -66,6 +71,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({
       ...task,
       stakeholderIds: JSON.parse(task.stakeholderIds || '[]'),
+      externalStakeholderNames: JSON.parse(task.externalStakeholderNames || '[]'),
       attachments: JSON.parse(task.attachments || '[]')
     })
   } catch (error) {

@@ -83,9 +83,22 @@ export function TaskFormDialog({
       setSprint(editTask.sprint)
       setOwnerId(editTask.ownerId || (editTask.externalOwnerName ? 'external' : ''))
       setExternalOwnerName(editTask.externalOwnerName || '')
-      setStakeholderIds(editTask.stakeholderIds || [])
-      setExternalStakeholderNames(editTask.externalStakeholderNames || [])
-      setAttachments(editTask.attachments || [])
+      const safeArray = (data: any) => {
+        if (Array.isArray(data)) return data
+        if (typeof data === 'string') {
+          try {
+            const parsed = JSON.parse(data)
+            return Array.isArray(parsed) ? parsed : []
+          } catch (e) {
+            return []
+          }
+        }
+        return []
+      }
+
+      setStakeholderIds(safeArray(editTask.stakeholderIds))
+      setExternalStakeholderNames(safeArray(editTask.externalStakeholderNames))
+      setAttachments(safeArray(editTask.attachments))
     } else {
       setTitle('')
       setDescription('')
@@ -419,7 +432,7 @@ export function TaskFormDialog({
                 ))}
 
                 {/* External Stakeholders Badges */}
-                {externalStakeholderNames.map((name, idx) => (
+                {Array.isArray(externalStakeholderNames) && externalStakeholderNames.map((name, idx) => (
                   <div
                     key={`ext-${idx}`}
                     className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-primary/10 border-primary/30 text-primary-foreground"
@@ -537,7 +550,7 @@ export function TaskFormDialog({
             )}
 
             <div className="flex flex-wrap gap-2">
-              {attachments.map((at) => (
+              {Array.isArray(attachments) && attachments.map((at) => (
                 <div key={at.id} className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-600 rounded-md px-2 py-1 text-[10px] font-bold">
                   <a href={at.url} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1">
                     <LinkIcon className="h-2.5 w-2.5" /> {at.name}

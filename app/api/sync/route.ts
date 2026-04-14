@@ -36,10 +36,17 @@ export async function GET() {
       projects: projects.map(p => ({
         ...p,
         memberIds: safeParse(p.memberIds, []),
+        stakeholderIds: safeParse(p.stakeholderIds, []),
+        attachments: safeParse(p.attachments, []),
         generalKpis: safeParse(p.generalKpis, []),
         yearlyGoals: safeParse(p.yearlyGoals, [])
       })),
-      tasks,
+      tasks: tasks.map(t => ({
+        ...t,
+        stakeholderIds: safeParse(t.stakeholderIds, []),
+        externalStakeholderNames: safeParse(t.externalStakeholderNames, []),
+        attachments: safeParse(t.attachments, [])
+      })),
       riskAnalyses: riskAnalyses.map(r => ({
         ...r,
         data: safeParse(r.data, {})
