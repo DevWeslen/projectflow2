@@ -265,14 +265,10 @@ export const useProjectStore = create<ProjectStore>()(
               return found ? found.progress : c.progress
             })
 
-            const sorted = [...latestChildProgresses].sort((a, b) => a - b)
-            const mid = Math.floor(sorted.length / 2)
-            let newProgress = 0
-            if (sorted.length > 0) {
-              newProgress = sorted.length % 2 === 0
-                ? (sorted[mid - 1] + sorted[mid]) / 2
-                : sorted[mid]
-            }
+            const totalProgress = latestChildProgresses.reduce((acc, p) => acc + p, 0)
+            const newProgress = latestChildProgresses.length > 0
+              ? totalProgress / latestChildProgresses.length
+              : 0
 
             const parentUpdate: Partial<Task> = { progress: newProgress, updatedAt: new Date() }
             if (isKanban) {
@@ -359,13 +355,8 @@ export const useProjectStore = create<ProjectStore>()(
         }
 
         const childProgresses = children.map(c => get().calculateTaskProgress(c.id))
-        const sorted = [...childProgresses].sort((a, b) => a - b)
-        const mid = Math.floor(sorted.length / 2)
-
-        if (sorted.length % 2 === 0) {
-          return (sorted[mid - 1] + sorted[mid]) / 2
-        }
-        return sorted[mid]
+        const totalProgress = childProgresses.reduce((acc, p) => acc + p, 0)
+        return childProgresses.length > 0 ? totalProgress / childProgresses.length : 0
       },
 
       calculateProjectProgress: (projectId) => {
@@ -375,13 +366,8 @@ export const useProjectStore = create<ProjectStore>()(
         if (rootTasks.length === 0) return 0
 
         const progresses = rootTasks.map(t => get().calculateTaskProgress(t.id))
-        const sorted = [...progresses].sort((a, b) => a - b)
-        const mid = Math.floor(sorted.length / 2)
-
-        if (sorted.length % 2 === 0) {
-          return (sorted[mid - 1] + sorted[mid]) / 2
-        }
-        return sorted[mid]
+        const totalProgress = progresses.reduce((acc, p) => acc + p, 0)
+        return progresses.length > 0 ? totalProgress / progresses.length : 0
       },
 
       seedExamples: () => {

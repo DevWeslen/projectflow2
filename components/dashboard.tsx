@@ -134,7 +134,7 @@ export function Dashboard({ onNewProject }: DashboardProps) {
                 Progresso Consolidado
               </CardTitle>
               <CardDescription className="text-base">
-                Média de progresso baseada na mediana de todos os macros
+                Média de progresso baseada no avanço de todos os macros
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4 pb-8">

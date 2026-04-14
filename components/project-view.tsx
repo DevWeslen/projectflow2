@@ -331,7 +331,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <TrendingUp className="h-4 w-4 text-primary" />
-                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Status da Mediana</span>
+                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Progresso Médio</span>
                       </div>
                       <span className="text-2xl font-black text-primary">{Math.round(progress)}%</span>
                     </div>
