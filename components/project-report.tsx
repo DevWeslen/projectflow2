@@ -59,7 +59,7 @@ export function ProjectReport({ projectId }: ProjectReportProps) {
               <tr key={task.id}>
                 <td className="border p-2 text-sm font-bold">{task.title}</td>
                 <td className="border p-2 text-xs uppercase font-medium">{TASK_STATUS_INFO[task.status].name}</td>
-                <td className="border p-2 text-center text-sm font-black">{task.progress}%</td>
+                <td className="border p-2 text-center text-sm font-black">{Math.round(task.progress)}%</td>
                 <td className="border p-2 text-sm">
                   {task.deadline ? new Date(task.deadline).toLocaleDateString('pt-BR') : '-'}
                 </td>

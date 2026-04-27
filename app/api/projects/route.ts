@@ -49,9 +49,10 @@ export async function POST(request: Request) {
       generalKpis: JSON.parse(project.generalKpis),
       yearlyGoals: JSON.parse(project.yearlyGoals)
     })
-  } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: 'Failed to create project' }, { status: 500 })
+  } catch (error: any) {
+    console.error('ERROR CREATING PROJECT:', error)
+    const errorMessage = error.message || 'Failed to create project'
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { TASK_STATUS_INFO, METHODOLOGY_INFO, autoStatusFromProgress, type Task, type TaskStatus, type Methodology } from '@/lib/types'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 import {
   Dialog,
   DialogContent,
@@ -63,6 +64,7 @@ export function TaskFormDialog({
   const [isUploading, setIsUploading] = useState(false)
   const [showCompletionPrompt, setShowCompletionPrompt] = useState(false)
   const [pendingTaskData, setPendingTaskData] = useState<any>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const { addTask, updateTask, tasks, users, user: currentUser } = useProjectStore()
 
@@ -147,18 +149,35 @@ export function TaskFormDialog({
     finalizeSave(taskData)
   }
 
-  const finalizeSave = (taskData: any) => {
-    if (editTask) {
-      updateTask(editTask.id, taskData)
-    } else {
-      addTask({
-        ...taskData,
-        parentId,
-        projectId
-      })
+  const finalizeSave = async (taskData: any) => {
+    setIsSubmitting(true)
+    try {
+      if (editTask) {
+        const success = await updateTask(editTask.id, taskData)
+        if (success) {
+          toast.success('Tarefa atualizada com sucesso!')
+          onOpenChange(false)
+        } else {
+          toast.error('Erro ao atualizar tarefa no servidor. Verifique sua conexão.')
+        }
+      } else {
+        const id = await addTask({
+          ...taskData,
+          parentId,
+          projectId
+        })
+        if (id) {
+          toast.success('Tarefa criada com sucesso!')
+          onOpenChange(false)
+        } else {
+          toast.error('Erro ao criar tarefa no servidor. Verifique sua conexão.')
+        }
+      }
+    } catch (err) {
+      toast.error('Ocorreu um erro inesperado ao salvar a tarefa.')
+    } finally {
+      setIsSubmitting(false)
     }
-    resetForm()
-    onOpenChange(false)
   }
 
   const handlePromptConfirm = (attachment?: { name: string; url: string; type: 'link' | 'file' }) => {
@@ -626,10 +645,10 @@ export function TaskFormDialog({
               </Button>
               <Button 
                 type="submit" 
-                disabled={!title.trim() || (ownerId === 'external' && !externalOwnerName.trim())}
+                disabled={isSubmitting || !title.trim() || (ownerId === 'external' && !externalOwnerName.trim())}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground font-black px-8 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105"
               >
-                {editTask ? 'Salvar Alterações' : 'Criar Tarefa'}
+                {isSubmitting ? 'Salvando...' : editTask ? 'Salvar Alterações' : 'Criar Tarefa'}
               </Button>
             </DialogFooter>
           </form>

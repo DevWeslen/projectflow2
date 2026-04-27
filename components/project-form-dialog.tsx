@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { METHODOLOGY_INFO, PROJECT_COLORS, type Methodology, type KPI } from '@/lib/types'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,7 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
   const [newAttachmentName, setNewAttachmentName] = useState('')
   const [newAttachmentUrl, setNewAttachmentUrl] = useState('')
   const [showAttachmentInput, setShowAttachmentInput] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Initial KPIs
   const [kpis, setKpis] = useState<KPI[]>([])
@@ -98,29 +100,40 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
 
   const handleRemoveKpi = (id: string) => setKpis(prev => prev.filter(k => k.id !== id))
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return
 
-    addProject({
-      name: name.trim(),
-      description: description.trim() || undefined,
-      methodology,
-      color,
-      category: category.trim() || 'geral',
-      deadline: deadline ? new Date(deadline) : undefined,
-      sprintDuration: methodology === 'scrum' ? Number(sprintDuration) : undefined,
-      totalSprints: methodology === 'scrum' ? Number(totalSprints) : undefined,
-      generalKpis: kpis,
-      yearlyGoals: undefined as any, // store will auto-generate
-      ownerId: currentUser?.id || 'system',
-      memberIds: [currentUser?.id || 'system', ...memberIds],
-      stakeholderIds: stakeholderIds,
-      attachments: attachments
-    })
+    setIsSubmitting(true)
+    try {
+      const id = await addProject({
+        name: name.trim(),
+        description: description.trim() || undefined,
+        methodology,
+        color,
+        category: category.trim() || 'geral',
+        deadline: deadline ? new Date(deadline) : undefined,
+        sprintDuration: methodology === 'scrum' ? Number(sprintDuration) : undefined,
+        totalSprints: methodology === 'scrum' ? Number(totalSprints) : undefined,
+        generalKpis: kpis,
+        yearlyGoals: undefined as any, // store will auto-generate
+        ownerId: currentUser?.id || 'system',
+        memberIds: [currentUser?.id || 'system', ...memberIds],
+        stakeholderIds: stakeholderIds,
+        attachments: attachments
+      })
 
-    resetForm()
-    onOpenChange(false)
+      if (id) {
+        toast.success('Projeto criado com sucesso!')
+        onOpenChange(false)
+      } else {
+        toast.error('Erro ao criar projeto no servidor. Verifique sua conexão.')
+      }
+    } catch (err) {
+      toast.error('Ocorreu um erro inesperado ao salvar o projeto.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const resetForm = () => {
@@ -472,10 +485,10 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
             </Button>
             <Button
               type="submit"
-              disabled={!name.trim()}
+              disabled={isSubmitting || !name.trim()}
               className="flex-1 sm:flex-none bg-primary hover:bg-primary/90 text-primary-foreground font-black px-6 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105"
             >
-              Criar Projeto
+              {isSubmitting ? 'Criando...' : 'Criar Projeto'}
             </Button>
           </DialogFooter>
         </form>

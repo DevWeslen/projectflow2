@@ -11,13 +11,13 @@ interface ProjectStore {
   riskAnalyses: RiskAnalysis[]
   selectedProjectId: string | null
 
-  addProject: (project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>) => string
-  updateProject: (id: string, updates: Partial<Project>) => void
+  addProject: (project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string | null>
+  updateProject: (id: string, updates: Partial<Project>) => Promise<boolean>
   deleteProject: (id: string) => void
   selectProject: (id: string | null) => void
 
-  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'order'>) => string
-  updateTask: (id: string, updates: Partial<Task>) => void
+  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'order'>) => Promise<string | null>
+  updateTask: (id: string, updates: Partial<Task>) => Promise<boolean>
   deleteTask: (id: string) => void
 
   addRiskAnalysis: (analysis: Omit<RiskAnalysis, 'id' | 'createdAt' | 'updatedAt'>) => string
@@ -38,18 +38,30 @@ interface ProjectStore {
   users: User[]
   login: (username: string, password: string) => boolean
   logout: () => void
-  addUser: (userData: Omit<User, 'id'>) => void
-  updateUser: (id: string, updates: Partial<User>) => void
-  deleteUser: (id: string) => void
+  addUser: (userData: Omit<User, 'id'>) => Promise<boolean>
+  updateUser: (id: string, updates: Partial<User>) => Promise<boolean>
+  deleteUser: (id: string) => Promise<boolean>
   initStore: () => Promise<void>
 }
 
-const backgroundSync = (url: string, method: string, data?: any) => {
-  fetch(url, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: data ? JSON.stringify(data) : undefined,
-  }).catch(err => console.error('Sync error:', err))
+const backgroundSync = async (url: string, method: string, data?: any) => {
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: data ? JSON.stringify(data) : undefined,
+    })
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}))
+      console.error(`Sync error (${method} ${url}):`, errorData.error || res.statusText)
+      return false
+    }
+    return true
+  } catch (err) {
+    console.error(`Sync network error (${method} ${url}):`, err)
+    return false
+  }
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 15)
@@ -70,10 +82,10 @@ export const useProjectStore = create<ProjectStore>()(
             const data = await res.json()
             set((state) => ({
               ...state,
-              projects: data.projects || state.projects,
-              tasks: data.tasks || state.tasks,
+              projects: (data.projects && data.projects.length > 0) ? data.projects : state.projects,
+              tasks: (data.tasks && data.tasks.length > 0) ? data.tasks : state.tasks,
               users: data.users && data.users.length > 0 ? data.users : state.users,
-              riskAnalyses: data.riskAnalyses || state.riskAnalyses
+              riskAnalyses: (data.riskAnalyses && data.riskAnalyses.length > 0) ? data.riskAnalyses : state.riskAnalyses
             }))
           }
         } catch (error) {
@@ -100,27 +112,41 @@ export const useProjectStore = create<ProjectStore>()(
         set({ user: null, selectedProjectId: null })
       },
 
-      addUser: (userData) => {
+      addUser: async (userData) => {
         const id = generateId()
         const user = { ...userData, id }
         set((state) => ({
           users: [...state.users, user]
         }))
-        backgroundSync('/api/users', 'POST', user)
+        const success = await backgroundSync('/api/users', 'POST', user)
+        if (!success) {
+          set((state) => ({ users: state.users.filter(u => u.id !== id) }))
+        }
+        return success
       },
 
-      updateUser: (id, updates) => {
+      updateUser: async (id, updates) => {
+        const oldUsers = [...get().users]
         set((state) => ({
           users: state.users.map((u) => (u.id === id ? { ...u, ...updates } : u))
         }))
-        backgroundSync('/api/users', 'PUT', { id, ...updates })
+        const success = await backgroundSync('/api/users', 'PUT', { id, ...updates })
+        if (!success) {
+          set({ users: oldUsers })
+        }
+        return success
       },
 
-      deleteUser: (id) => {
+      deleteUser: async (id) => {
+        const oldUsers = [...get().users]
         set((state) => ({
           users: state.users.filter((u) => u.id !== id)
         }))
-        backgroundSync(`/api/users?id=${id}`, 'DELETE')
+        const success = await backgroundSync(`/api/users?id=${id}`, 'DELETE')
+        if (!success) {
+          set({ users: oldUsers })
+        }
+        return success
       },
 
       setActiveView: (view) => {
@@ -131,7 +157,7 @@ export const useProjectStore = create<ProjectStore>()(
         set({ selectedProjectId: id, activeView: id ? 'main' : get().activeView })
       },
 
-      addProject: (projectData) => {
+      addProject: async (projectData) => {
         const id = generateId()
         const now = new Date()
 
@@ -181,17 +207,33 @@ export const useProjectStore = create<ProjectStore>()(
           projects: [...state.projects, project],
           selectedProjectId: id
         }))
-        backgroundSync('/api/projects', 'POST', project)
+        
+        const success = await backgroundSync('/api/projects', 'POST', project)
+        if (!success) {
+          // Rollback on failure? For now just return null
+          set((state) => ({
+            projects: state.projects.filter(p => p.id !== id),
+            selectedProjectId: state.selectedProjectId === id ? null : state.selectedProjectId
+          }))
+          return null
+        }
         return id
       },
 
-      updateProject: (id, updates) => {
+      updateProject: async (id, updates) => {
+        const oldProject = get().projects.find(p => p.id === id)
         set((state) => ({
           projects: state.projects.map((p) =>
             p.id === id ? { ...p, ...updates, updatedAt: new Date() } : p
           )
         }))
-        backgroundSync('/api/projects', 'PUT', { id, ...updates })
+        const success = await backgroundSync('/api/projects', 'PUT', { id, ...updates })
+        if (!success && oldProject) {
+          set((state) => ({
+            projects: state.projects.map(p => p.id === id ? oldProject : p)
+          }))
+        }
+        return success
       },
 
       deleteProject: (id) => {
@@ -204,7 +246,7 @@ export const useProjectStore = create<ProjectStore>()(
         backgroundSync(`/api/projects?id=${id}`, 'DELETE')
       },
 
-      addTask: (taskData) => {
+      addTask: async (taskData) => {
         const id = generateId()
         const now = new Date()
         const state = get()
@@ -222,11 +264,16 @@ export const useProjectStore = create<ProjectStore>()(
           order: siblingTasks.length
         }
         set((state) => ({ tasks: [...state.tasks, task] }))
-        backgroundSync('/api/tasks', 'POST', task)
+        const success = await backgroundSync('/api/tasks', 'POST', task)
+        if (!success) {
+          set((state) => ({ tasks: state.tasks.filter(t => t.id !== id) }))
+          return null
+        }
         return id
       },
 
-      updateTask: (id, updates) => {
+      updateTask: async (id, updates) => {
+        const oldTasks = [...get().tasks]
         set((state) => {
           const tasks = [...state.tasks]
           const taskIndex = tasks.findIndex(t => t.id === id)
@@ -281,8 +328,11 @@ export const useProjectStore = create<ProjectStore>()(
 
           return { tasks }
         })
-        // Syncing just the updated task to backend to keep it simple
-        backgroundSync('/api/tasks', 'PUT', { id, ...updates })
+        const success = await backgroundSync('/api/tasks', 'PUT', { id, ...updates })
+        if (!success) {
+          set({ tasks: oldTasks })
+        }
+        return success
       },
 
       deleteTask: (id) => {

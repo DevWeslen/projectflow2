@@ -15,6 +15,7 @@ export async function POST(request: Request) {
     const userData = await request.json()
     const user = await prisma.user.create({
       data: {
+        id: userData.id,
         name: userData.name,
         username: userData.username,
         role: userData.role,
@@ -22,7 +23,43 @@ export async function POST(request: Request) {
       }
     })
     return NextResponse.json(user)
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
+  } catch (error: any) {
+    console.error('ERROR CREATING USER:', error)
+    return NextResponse.json({ error: error.message || 'Failed to create user' }, { status: 500 })
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const { id, ...userData } = await request.json()
+    const user = await prisma.user.update({
+      where: { id },
+      data: {
+        name: userData.name,
+        username: userData.username,
+        role: userData.role,
+        password: userData.password
+      }
+    })
+    return NextResponse.json(user)
+  } catch (error: any) {
+    console.error('ERROR UPDATING USER:', error)
+    return NextResponse.json({ error: error.message || 'Failed to update user' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 })
+
+    await prisma.user.delete({
+      where: { id }
+    })
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    console.error('ERROR DELETING USER:', error)
+    return NextResponse.json({ error: error.message || 'Failed to delete user' }, { status: 500 })
   }
 }

@@ -58,7 +58,7 @@ export function ProjectTimeline({ projectId }: ProjectTimelineProps) {
                           {task.status}
                         </Badge>
                         {task.progress > 0 && (
-                           <span className="text-[10px] font-black text-primary">{task.progress}%</span>
+                           <span className="text-[10px] font-black text-primary">{Math.round(task.progress)}%</span>
                         )}
                       </div>
                     </div>

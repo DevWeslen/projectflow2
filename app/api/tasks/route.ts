@@ -45,9 +45,11 @@ export async function POST(request: Request) {
       externalStakeholderNames: JSON.parse(task.externalStakeholderNames || '[]'),
       attachments: JSON.parse(task.attachments || '[]')
     })
-  } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: 'Failed to create task' }, { status: 500 })
+  } catch (error: any) {
+    console.error('ERROR CREATING TASK:', error)
+    // Return more specific error if possible
+    const errorMessage = error.message || 'Failed to create task'
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }
 

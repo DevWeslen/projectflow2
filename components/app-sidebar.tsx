@@ -123,7 +123,7 @@ export function AppSidebar({ onNewProject }: AppSidebarProps) {
                     />
                     <span className="truncate flex-1 uppercase text-[11px] tracking-tight">{project.name}</span>
                     <span className="text-[9px] font-black opacity-40 group-hover:opacity-100">
-                      {calculateProjectProgress(project.id)}%
+                      {Math.round(calculateProjectProgress(project.id))}%
                     </span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
