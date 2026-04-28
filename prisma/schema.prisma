@@ -30,6 +30,7 @@ model Project {
   owner        User     @relation("ProjectOwner", fields: [ownerId], references: [id])
   memberIds    String   // JSON array of strings
   stakeholderIds String? // JSON array of strings
+  externalStakeholderNames String?
   attachments  String?   // JSON array of attachment objects
   generalKpis  String   // JSON array of KPI objects
   yearlyGoals  String   // JSON array of YearlyGoal objects
@@ -51,6 +52,7 @@ model Task {
   parentId    String?
   ownerId     String?
   stakeholderIds String? // JSON array of strings
+  externalStakeholderNames String?
   attachments String?   // JSON array of attachment objects
   title       String
   description String?
@@ -60,8 +62,6 @@ model Task {
   deadline    DateTime?
   actualStartDate DateTime?
   actualEndDate   DateTime?
-  externalOwnerName String?
-  externalStakeholderNames String? // JSON array of strings
   sprint      Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
