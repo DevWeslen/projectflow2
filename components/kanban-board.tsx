@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { TASK_STATUS_INFO, type Task, type TaskStatus } from '@/lib/types'
-import { cn } from '@/lib/utils'
+import { cn, getFileUrl } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { UserAvatar } from './user-avatar'
 import { AttachmentPromptDialog } from './attachment-prompt-dialog'
+import { TaskDetailDialog } from './task-detail-dialog'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -37,9 +38,10 @@ interface KanbanCardProps {
   onEdit: (task: Task) => void
   onAddSubtask: (parentId: string) => void
   onCompleteWithAttachment: (task: Task, update: Partial<Task>) => void
+  onViewDetails: (task: Task) => void
 }
 
-function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment }: KanbanCardProps) {
+function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment, onViewDetails }: KanbanCardProps) {
   const { calculateTaskProgress, deleteTask, getChildTasks, updateTask, users } = useProjectStore()
   const [isExpanded, setIsExpanded] = useState(false)
   const progress = calculateTaskProgress(task.id)
@@ -55,8 +57,11 @@ function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment }: Ka
   }
 
   return (
-    <Card className="group glass-card border-none hover:border-primary/30 transition-all mb-3 animate-in-fade shadow-sm hover:shadow-md overflow-hidden">
-      <CardContent className="p-4 space-y-4">
+      <Card 
+        className="group glass-card border-none hover:border-primary/30 transition-all mb-3 animate-in-fade shadow-sm hover:shadow-md overflow-hidden cursor-pointer"
+        onClick={() => onViewDetails(task)}
+      >
+        <CardContent className="p-4 space-y-4">
         {/* Card Header & Main Info */}
         <div className="flex items-start justify-between gap-2">
           {/* Toggle Done */}
@@ -71,7 +76,12 @@ function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment }: Ka
             {isDone ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
           </button>
 
-          <div className="flex-1 min-w-0" onClick={() => children.length > 0 && setIsExpanded(!isExpanded)} style={{ cursor: children.length > 0 ? 'pointer' : 'default' }}>
+          <div className="flex-1 min-w-0" onClick={(e) => {
+            if (children.length > 0) {
+              e.stopPropagation()
+              setIsExpanded(!isExpanded)
+            }
+          }} style={{ cursor: children.length > 0 ? 'pointer' : 'default' }}>
             <h4 className={cn(
               "font-bold text-sm text-foreground leading-snug line-clamp-2 transition-colors group-hover:text-primary",
               isDone && "line-through opacity-60"
@@ -86,7 +96,7 @@ function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment }: Ka
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                 <MoreHorizontal className="h-3.5 w-3.5" />
               </Button>
             </DropdownMenuTrigger>
@@ -183,7 +193,7 @@ function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment }: Ka
             {task.attachments.map((at: any) => (
               <a 
                 key={at.id} 
-                href={at.url} 
+                href={getFileUrl(at.url)} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 text-[8px] font-bold text-blue-600 transition-colors"
@@ -261,6 +271,7 @@ interface KanbanBoardProps {
 export function KanbanBoard({ projectId, onAddTask, onEditTask }: KanbanBoardProps) {
   const { getProjectTasks, updateTask } = useProjectStore()
   const [completionPromptInfo, setCompletionPromptInfo] = useState<{ task: Task, update: Partial<Task> } | null>(null)
+  const [detailTask, setDetailTask] = useState<Task | null>(null)
   
   const allTasks = getProjectTasks(projectId)
 
@@ -348,6 +359,7 @@ export function KanbanBoard({ projectId, onAddTask, onEditTask }: KanbanBoardPro
                     onEdit={onEditTask} 
                     onAddSubtask={onAddTask} 
                     onCompleteWithAttachment={handleCompleteWithAttachment}
+                    onViewDetails={setDetailTask}
                   />
                 ))
               )}
@@ -364,6 +376,12 @@ export function KanbanBoard({ projectId, onAddTask, onEditTask }: KanbanBoardPro
           onConfirm={handleAttachmentConfirm}
         />
       )}
+
+      <TaskDetailDialog 
+        task={detailTask}
+        open={!!detailTask}
+        onOpenChange={(open) => !open && setDetailTask(null)}
+      />
     </div>
   )
 }

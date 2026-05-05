@@ -28,10 +28,11 @@ export async function POST(request: NextRequest) {
     const path = join(uploadDir, fileName)
 
     // Write file
+    console.log(`[UPLOAD_API] Saving file to: ${path}`)
     await writeFile(path, buffer)
     
-    // Return the public URL
-    const url = `/uploads/${fileName}`
+    // Return the public URL via the files API to avoid 404 in production
+    const url = `/api/files/${fileName}`
     
     return NextResponse.json({ 
       success: true, 

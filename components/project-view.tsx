@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { METHODOLOGY_INFO, type Task } from '@/lib/types'
-import { cn } from '@/lib/utils'
+import { cn, getFileUrl } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
@@ -35,7 +35,8 @@ import {
   FileText,
   Layers,
   History,
-  Users
+  Users,
+  CheckCircle2
 } from 'lucide-react'
 import { exportProjectToCSV, exportRiskToCSV, exportFullProjectToCSV } from '@/lib/export-utils'
 import { ProjectReport } from './project-report'
@@ -69,7 +70,7 @@ interface ProjectViewProps {
 }
 
 export function ProjectView({ projectId }: ProjectViewProps) {
-  const { projects, tasks, riskAnalyses, calculateProjectProgress, deleteProject, selectProject, user } = useProjectStore()
+  const { projects, tasks, riskAnalyses, calculateProjectProgress, deleteProject, selectProject, user, updateProject } = useProjectStore()
 
   const project = projects.find(p => p.id === projectId)
   const projectAnalyses = riskAnalyses.filter(r => r.projectId === projectId)
@@ -143,9 +144,16 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                   style={{ backgroundColor: project.color }}
                 />
                 <div className="min-w-0">
-                  <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight text-gradient truncate">
-                    {project.name}
-                  </h1>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight text-gradient truncate">
+                      {project.name}
+                    </h1>
+                    {project.status === 'completed' && (
+                      <Badge className="bg-[#1D9E75]/10 text-[#1D9E75] border-[#1D9E75]/20 text-[9px] font-black uppercase">
+                        Concluído
+                      </Badge>
+                    )}
+                  </div>
                   {project.description && (
                     <p className="text-[10px] sm:text-xs text-muted-foreground font-medium truncate max-w-[200px] sm:max-w-sm">
                       {project.description}
@@ -227,10 +235,23 @@ export function ProjectView({ projectId }: ProjectViewProps) {
 
                   <div className="px-2 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Gerenciar</div>
                   {isOwnerOrAdmin && (
-                    <DropdownMenuItem onClick={() => setIsSettingsOpen(true)}>
-                      <Settings className="h-4 w-4 mr-2" />
-                      Configuracoes
-                    </DropdownMenuItem>
+                    <>
+                      {project.status === 'active' ? (
+                        <DropdownMenuItem onClick={() => updateProject(project.id, { status: 'completed' })}>
+                          <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />
+                          Concluir Projeto
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onClick={() => updateProject(project.id, { status: 'active' })}>
+                          <TrendingUp className="h-4 w-4 mr-2 text-primary" />
+                          Reativar Projeto
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem onClick={() => setIsSettingsOpen(true)}>
+                        <Settings className="h-4 w-4 mr-2" />
+                        Configuracoes
+                      </DropdownMenuItem>
+                    </>
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

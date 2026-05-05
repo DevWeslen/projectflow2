@@ -201,6 +201,7 @@ export const useProjectStore = create<ProjectStore>()(
           memberIds: projectData.memberIds || [get().user?.id || 'system'],
           stakeholderIds: projectData.stakeholderIds || [],
           attachments: projectData.attachments || [],
+          status: 'active'
         }
 
         set((state) => ({

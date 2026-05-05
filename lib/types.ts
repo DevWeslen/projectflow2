@@ -70,6 +70,13 @@ export interface Task {
   sprint?: number // For Scrum methodology
 }
 
+export type ProjectStatus = 'active' | 'completed' | 'archived'
+export const PROJECT_STATUS_INFO: Record<ProjectStatus, { name: string; color: string; icon: string }> = {
+  'active': { name: 'Ativo', color: 'bg-primary/20 text-primary', icon: '🚀' },
+  'completed': { name: 'Concluído', color: 'bg-[#1D9E75]/20 text-[#1D9E75]', icon: '✅' },
+  'archived': { name: 'Arquivado', color: 'bg-muted text-muted-foreground', icon: '📦' }
+}
+
 export interface Project {
   id: string
   name: string
@@ -88,6 +95,7 @@ export interface Project {
   generalKpis: KPI[]
   yearlyGoals: YearlyGoal[]
   deadline?: Date
+  status: ProjectStatus
   // Scrum specific settings
   sprintDuration?: number // in weeks
   totalSprints?: number

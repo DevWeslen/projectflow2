@@ -38,7 +38,8 @@ export async function POST(request: Request) {
         actualStartDate: data.actualStartDate ? new Date(data.actualStartDate) : null,
         actualEndDate: data.actualEndDate ? new Date(data.actualEndDate) : null,
         sprintDuration: data.sprintDuration,
-        totalSprints: data.totalSprints
+        totalSprints: data.totalSprints,
+        status: data.status || 'active'
       }
     })
     return NextResponse.json({

@@ -51,6 +51,7 @@ export function ConsolidatedDashboard() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [selectedOwner, setSelectedOwner] = useState<string>('all')
+  const [showCompleted, setShowCompleted] = useState<boolean>(false)
 
   const { users } = useProjectStore()
 
@@ -73,6 +74,10 @@ export function ConsolidatedDashboard() {
                      project.memberIds?.includes(user.id)
     
     if (!hasAccess) return false
+
+    // Filter by Status
+    if (!showCompleted && project.status === 'completed') return false
+    if (showCompleted && project.status !== 'completed') return false
 
     // Filter by year: project must have a goal in that year or have been created in/before that year
     const hasGoalInYear = project.yearlyGoals?.some((g: any) => g.year === selectedYear)
@@ -201,6 +206,20 @@ export function ConsolidatedDashboard() {
                     {u.name.split(' ')[0]}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Status Filter */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest hidden lg:block">Status:</span>
+            <Select value={showCompleted ? 'completed' : 'active'} onValueChange={(v) => setShowCompleted(v === 'completed')}>
+              <SelectTrigger className="w-[100px] h-8 text-[10px] font-bold border-zinc-200 bg-white">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active" className="text-[10px] font-bold">Ativos</SelectItem>
+                <SelectItem value="completed" className="text-[10px] font-bold">Concluídos</SelectItem>
               </SelectContent>
             </Select>
           </div>

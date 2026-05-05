@@ -26,7 +26,7 @@ import { Slider } from '@/components/ui/slider'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { CalendarDays, Zap, Plus, Trash2, Check, User, Users, Link as LinkIcon, FileUp } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, getFileUrl } from '@/lib/utils'
 import { AttachmentPromptDialog } from './attachment-prompt-dialog'
 
 interface TaskFormDialogProps {
@@ -571,7 +571,7 @@ export function TaskFormDialog({
             <div className="flex flex-wrap gap-2">
               {Array.isArray(attachments) && attachments.map((at) => (
                 <div key={at.id} className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-600 rounded-md px-2 py-1 text-[10px] font-bold">
-                  <a href={at.url} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1">
+                  <a href={getFileUrl(at.url)} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1">
                     <LinkIcon className="h-2.5 w-2.5" /> {at.name}
                   </a>
                   <button type="button" onClick={() => handleRemoveAttachment(at.id)} className="text-destructive/70 hover:text-destructive ml-1">

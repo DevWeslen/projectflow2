@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { TASK_STATUS_INFO, type Task, type TaskStatus } from '@/lib/types'
-import { cn } from '@/lib/utils'
+import { cn, getFileUrl } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
@@ -170,7 +170,7 @@ function TaskNode({ task, level, onAddSubtask, onEditTask, onCompleteWithAttachm
                 {task.attachments.map((at: any) => (
                   <a 
                     key={at.id}
-                    href={at.url}
+                    href={getFileUrl(at.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-500/60 hover:text-blue-500 transition-colors"
