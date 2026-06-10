@@ -19,6 +19,7 @@ export async function GET() {
 
     const projects = await prisma.project.findMany()
     const tasks = await prisma.task.findMany()
+    const taskDependencies = await prisma.taskDependency.findMany()
     const riskAnalyses = await prisma.riskAnalysis.findMany()
 
     const safeParse = (str: string | null, fallback: any) => {
@@ -47,6 +48,7 @@ export async function GET() {
         externalStakeholderNames: safeParse(t.externalStakeholderNames, []),
         attachments: safeParse(t.attachments, [])
       })),
+      taskDependencies,
       riskAnalyses: riskAnalyses.map(r => ({
         ...r,
         data: safeParse(r.data, {})

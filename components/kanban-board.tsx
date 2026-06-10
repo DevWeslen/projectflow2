@@ -19,7 +19,8 @@ import {
   CalendarDays,
   Zap,
   Users,
-  Paperclip
+  Paperclip,
+  AlertCircle
 } from 'lucide-react'
 import { UserAvatar } from './user-avatar'
 import { AttachmentPromptDialog } from './attachment-prompt-dialog'
@@ -42,11 +43,20 @@ interface KanbanCardProps {
 }
 
 function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment, onViewDetails }: KanbanCardProps) {
-  const { calculateTaskProgress, deleteTask, getChildTasks, updateTask, users } = useProjectStore()
+  const { calculateTaskProgress, deleteTask, getChildTasks, updateTask, users, tasks, taskDependencies } = useProjectStore()
   const [isExpanded, setIsExpanded] = useState(false)
   const progress = calculateTaskProgress(task.id)
   const children = getChildTasks(task.id)
   const isDone = task.status === 'done'
+
+  const hasDelayedPredecessor = taskDependencies
+    .filter(d => d.successorId === task.id)
+    .some(d => {
+      const pTask = tasks.find(t => t.id === d.predecessorId)
+      if (!pTask) return false
+      if (pTask.status === 'done') return false
+      return pTask.deadline ? new Date() > new Date(pTask.deadline) : false
+    })
 
   const handleToggleDone = () => {
     if (isDone) {
@@ -92,6 +102,12 @@ function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment, onVi
               <p className="text-[10px] text-muted-foreground line-clamp-2 mt-1 font-medium">
                 {task.description}
               </p>
+            )}
+            {hasDelayedPredecessor && (
+              <div className="flex items-center gap-1 mt-1 text-[9px] font-bold text-red-500 bg-red-500/10 w-fit px-1.5 py-0.5 rounded-sm">
+                <AlertCircle className="h-3 w-3" />
+                <span>Risco: Bloqueada</span>
+              </div>
             )}
           </div>
           <DropdownMenu>

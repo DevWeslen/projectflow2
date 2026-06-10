@@ -48,6 +48,14 @@ export interface Attachment {
   createdAt: Date
 }
 
+export interface TaskDependency {
+  id: string
+  predecessorId: string
+  successorId: string
+  type: string
+  createdAt: Date
+}
+
 export interface Task {
   id: string
   title: string
@@ -68,6 +76,8 @@ export interface Task {
   order: number
   deadline?: Date
   sprint?: number // For Scrum methodology
+  predecessors?: TaskDependency[]
+  successors?: TaskDependency[]
 }
 
 export type ProjectStatus = 'active' | 'completed' | 'archived'

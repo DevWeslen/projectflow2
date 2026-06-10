@@ -9,7 +9,6 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { 
   Calendar, 
   User as UserIcon, 
@@ -26,6 +25,7 @@ import { useProjectStore } from '@/lib/store'
 import { TASK_STATUS_INFO, type Task } from '@/lib/types'
 import { cn, getFileUrl } from '@/lib/utils'
 import { UserAvatar } from './user-avatar'
+import { TaskDependenciesManager } from './task-dependencies-manager'
 
 interface TaskDetailDialogProps {
   task: Task | null
@@ -48,8 +48,8 @@ export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col glass border-none shadow-2xl p-0">
-        <DialogHeader className="p-6 pb-2">
+      <DialogContent className="w-[95vw] sm:max-w-[600px] md:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col glass border-none shadow-2xl p-0">
+        <DialogHeader className="p-4 sm:p-6 pb-2">
           <div className="flex items-center justify-between gap-4 mb-2">
             <Badge className={cn("text-[10px] font-black uppercase px-2.5 py-0.5", statusInfo.color)}>
               {statusInfo.name}
@@ -63,8 +63,8 @@ export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogP
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 p-6 pt-2">
-          <div className="space-y-8">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 pt-2">
+          <div className="space-y-6 sm:space-y-8">
             {/* Progress Section */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -166,6 +166,9 @@ export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogP
               </div>
             </div>
 
+            {/* Dependencies */}
+            <TaskDependenciesManager taskId={task.id} projectId={task.projectId} />
+
             {/* Attachments */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
@@ -213,7 +216,7 @@ export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogP
               </div>
             </div>
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   )

@@ -40,6 +40,8 @@ import {
 } from 'lucide-react'
 import { exportProjectToCSV, exportRiskToCSV, exportFullProjectToCSV } from '@/lib/export-utils'
 import { ProjectReport } from './project-report'
+import { StatusReport } from './status-report'
+import { StatusReportKpi } from './status-report-kpi'
 import { ProjectSettingsDialog } from './project-settings-dialog'
 import {
   DropdownMenu,
@@ -69,6 +71,8 @@ interface ProjectViewProps {
   projectId: string
 }
 
+type ViewMode = 'tree' | 'board' | 'diagram' | 'risk' | 'kpi' | 'timeline' | 'status-report' | 'status-report-kpi'
+
 export function ProjectView({ projectId }: ProjectViewProps) {
   const { projects, tasks, riskAnalyses, calculateProjectProgress, deleteProject, selectProject, user, updateProject } = useProjectStore()
 
@@ -82,7 +86,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   // Default view based on methodology
-  const [view, setView] = useState<'tree' | 'board' | 'diagram' | 'risk' | 'kpi' | 'timeline'>(() => {
+  const [view, setView] = useState<ViewMode>(() => {
     if (!project) return 'tree'
     if (project.methodology === 'kanban' || project.methodology === 'scrum') return 'board'
     if (project.methodology === 'waterfall') return 'diagram'
@@ -226,9 +230,13 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                     <Layers className="h-4 w-4 mr-2 text-orange-500" />
                     Relatório Completo (Excel)
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => window.print()}>
+                  <DropdownMenuItem onClick={() => setView('status-report')}>
                     <FileText className="h-4 w-4 mr-2 text-primary" />
-                    Gerar PDF (Visual/Relatório)
+                    Gerar Status Report
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setView('status-report-kpi')}>
+                    <Target className="h-4 w-4 mr-2 text-green-500" />
+                    Gerar Status Report (Indicadores)
                   </DropdownMenuItem>
 
                   <DropdownMenuSeparator />
@@ -453,6 +461,8 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                       {view === 'board' && <><LayoutDashboard className="h-5 w-5 text-primary" /> Kanban Board</>}
                       {view === 'diagram' && <><Network className="h-5 w-5 text-primary" /> Fluxo do Projeto</>}
                       {view === 'timeline' && <><History className="h-5 w-5 text-primary" /> Cronograma Real</>}
+                      {view === 'status-report' && <><FileText className="h-5 w-5 text-primary" /> Status Report Avançado</>}
+                      {view === 'status-report-kpi' && <><Target className="h-5 w-5 text-green-500" /> Status Report de Indicadores</>}
                     </CardTitle>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-[10px] font-black tracking-tighter uppercase px-2 py-0">
@@ -498,6 +508,28 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                   {view === 'timeline' && (
                     <ProjectTimeline projectId={projectId} />
                   )}
+                  {view === 'status-report' && (
+                    <div className="relative">
+                      <div className="flex justify-end p-4 border-b border-border/50 print:hidden">
+                        <Button onClick={() => window.print()} className="bg-primary text-white shadow-lg">
+                          <Download className="h-4 w-4 mr-2" />
+                          Baixar PDF
+                        </Button>
+                      </div>
+                      <StatusReport projectId={projectId} />
+                    </div>
+                  )}
+                  {view === 'status-report-kpi' && (
+                    <div className="relative">
+                      <div className="flex justify-end p-4 border-b border-border/50 print:hidden">
+                        <Button onClick={() => window.print()} className="bg-primary text-white shadow-lg">
+                          <Download className="h-4 w-4 mr-2" />
+                          Baixar PDF
+                        </Button>
+                      </div>
+                      <StatusReportKpi projectId={projectId} />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -537,8 +569,10 @@ export function ProjectView({ projectId }: ProjectViewProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Report View (Print Only) */}
-      <ProjectReport projectId={projectId} />
+      {/* Old Report View (Print Only) - Retained for compatibility if needed */}
+      <div className="hidden print:hidden">
+        <ProjectReport projectId={projectId} />
+      </div>
 
       {/* Settings Dialog */}
       <ProjectSettingsDialog 

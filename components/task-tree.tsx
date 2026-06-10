@@ -20,7 +20,8 @@ import {
   CalendarDays,
   Zap,
   Users,
-  Paperclip
+  Paperclip,
+  AlertCircle
 } from 'lucide-react'
 import { UserAvatar } from './user-avatar'
 import { AttachmentPromptDialog } from './attachment-prompt-dialog'
@@ -50,7 +51,7 @@ interface TaskNodeProps {
 }
 
 function TaskNode({ task, level, onAddSubtask, onEditTask, onCompleteWithAttachment }: TaskNodeProps) {
-  const { getChildTasks, updateTask, deleteTask, calculateTaskProgress, users } = useProjectStore()
+  const { getChildTasks, updateTask, deleteTask, calculateTaskProgress, users, tasks, taskDependencies } = useProjectStore()
   const [isExpanded, setIsExpanded] = useState(true)
   
   const children = getChildTasks(task.id)
@@ -58,6 +59,15 @@ function TaskNode({ task, level, onAddSubtask, onEditTask, onCompleteWithAttachm
   const calculatedProgress = calculateTaskProgress(task.id)
   const statusInfo = TASK_STATUS_INFO[task.status]
   const isDone = task.status === 'done'
+
+  const hasDelayedPredecessor = taskDependencies
+    .filter(d => d.successorId === task.id)
+    .some(d => {
+      const pTask = tasks.find(t => t.id === d.predecessorId)
+      if (!pTask) return false
+      if (pTask.status === 'done') return false
+      return pTask.deadline ? new Date() > new Date(pTask.deadline) : false
+    })
 
   const handleToggleDone = () => {
     if (isDone) {
@@ -132,13 +142,21 @@ function TaskNode({ task, level, onAddSubtask, onEditTask, onCompleteWithAttachm
         {/* Task Content */}
         <div className="flex-1 min-w-0 flex items-center gap-2 sm:gap-3">
           <div className="flex flex-col min-w-0">
-            <span className={cn(
-              "font-semibold truncate",
-              level === 0 ? "text-sm sm:text-base text-foreground" : "text-[11px] sm:text-sm text-foreground/80",
-              isDone && "line-through opacity-60"
-            )}>
-              {task.title}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={cn(
+                "font-semibold truncate",
+                level === 0 ? "text-sm sm:text-base text-foreground" : "text-[11px] sm:text-sm text-foreground/80",
+                isDone && "line-through opacity-60"
+              )}>
+                {task.title}
+              </span>
+              {hasDelayedPredecessor && (
+                <div className="flex items-center gap-1 text-[9px] font-bold text-red-500 bg-red-500/10 w-fit px-1.5 py-0.5 rounded-sm shrink-0">
+                  <AlertCircle className="h-3 w-3" />
+                  <span className="hidden sm:inline">Risco: Bloqueada</span>
+                </div>
+              )}
+            </div>
             {task.description && (
               <span className="text-[10px] sm:text-[11px] text-muted-foreground/70 truncate max-w-[120px] xs:max-w-xs font-medium">
                 {task.description}
