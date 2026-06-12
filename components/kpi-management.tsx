@@ -137,12 +137,39 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
     const yearGoal = { ...updatedGoals[yearIndex] }
     const kpisList = [...yearGoal.kpis]
 
+    const baseKpi = kpis.find(k => k.id === kpiId)
     const kpiIndex = kpisList.findIndex(k => k.id === kpiId)
+    
     if (kpiIndex >= 0) {
-      kpisList[kpiIndex] = { ...kpisList[kpiIndex], [type]: value }
+      const currentKpi = kpisList[kpiIndex]
+      let newMonthly = currentKpi.monthly
+      
+      // Auto-distribute the new target across the months if target changed
+      if (type === 'target' && baseKpi) {
+        const isFraction = baseKpi.distribution === 'fraction' || (!baseKpi.distribution && baseKpi.aggregation === 'sum')
+        const perMonth = isFraction ? Math.round((value / 12) * 100) / 100 : value
+        if (newMonthly) {
+          newMonthly = newMonthly.map(m => ({ ...m, target: perMonth }))
+        } else {
+          newMonthly = Array.from({length: 12}).map((_, i) => ({
+            monthIndex: i,
+            current: 0,
+            target: perMonth
+          }))
+        }
+      }
+      kpisList[kpiIndex] = { ...currentKpi, [type]: value, monthly: newMonthly }
     } else {
-      const baseKpi = kpis.find(k => k.id === kpiId)
-      if (baseKpi) kpisList.push({ ...baseKpi, current: 0, target: 0, [type]: value })
+      if (baseKpi) {
+        const isFraction = baseKpi.distribution === 'fraction' || (!baseKpi.distribution && baseKpi.aggregation === 'sum')
+        const perMonth = isFraction ? Math.round((value / 12) * 100) / 100 : value
+        const newMonthly = Array.from({length: 12}).map((_, i) => ({
+          monthIndex: i,
+          current: 0,
+          target: type === 'target' ? perMonth : 0
+        }))
+        kpisList.push({ ...baseKpi, current: 0, target: 0, [type]: value, monthly: newMonthly })
+      }
     }
     yearGoal.kpis = kpisList
     updatedGoals[yearIndex] = yearGoal
@@ -178,6 +205,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
       unit: baseKpi.unit,
       target: yKpi.target,
       aggregation: baseKpi.aggregation,
+      distribution: baseKpi.distribution,
       monthly: yKpi.monthly || defaultMonthly
     })
   }
@@ -612,16 +640,16 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                               <p className="text-xs font-bold text-slate-700 uppercase tracking-widest">{baseKpi.name}</p>
                             </div>
                             
-                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
+                            <div className="flex flex-wrap items-stretch items-center gap-2 sm:gap-3">
                               {/* Realizado */}
-                              <div className="flex-1 bg-white border border-slate-200 rounded-xl p-2 pb-1.5 group/edit relative cursor-pointer hover:border-slate-300 transition-colors shadow-sm"
+                              <div className="flex-1 min-w-[110px] bg-white border border-slate-200 rounded-xl p-2 pb-1.5 group/edit relative cursor-pointer hover:border-slate-300 transition-colors shadow-sm"
                                 onClick={() => !isEditCurrent && startEditing(yIdx, yKpi, 'current')}>
                                 <p className="text-[9px] font-black text-slate-400 uppercase mb-0.5">Realizado</p>
                                 {isEditCurrent ? (
-                                  <div className="flex items-center gap-1.5 h-6">
-                                    <Input autoFocus value={editValue} onChange={e => setEditValue(e.target.value)} className="h-full px-1.5 text-sm font-bold w-full rounded-md" />
-                                    <button className="bg-slate-900 text-white p-1 rounded hover:bg-slate-800" onClick={(e) => { e.stopPropagation(); handleUpdateYearlyGoal(yIdx, baseKpi.id, 'current', Number(editValue)) }}>
-                                      <Check className="w-3 h-3" />
+                                  <div className="flex items-center gap-1.5 h-7">
+                                    <Input autoFocus value={editValue} onChange={e => setEditValue(e.target.value)} className="h-full px-1.5 text-sm font-bold w-full min-w-0 rounded-md" />
+                                    <button className="bg-slate-900 text-white p-1 rounded hover:bg-slate-800 shrink-0" onClick={(e) => { e.stopPropagation(); handleUpdateYearlyGoal(yIdx, baseKpi.id, 'current', Number(editValue)) }}>
+                                      <Check className="w-4 h-4" />
                                     </button>
                                   </div>
                                 ) : (
@@ -633,14 +661,14 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                               </div>
                               
                               {/* Meta */}
-                              <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-2 pb-1.5 group/edit relative cursor-pointer hover:border-slate-300 transition-colors"
+                              <div className="flex-1 min-w-[110px] bg-slate-50 border border-slate-200 rounded-xl p-2 pb-1.5 group/edit relative cursor-pointer hover:border-slate-300 transition-colors"
                                 onClick={() => !isEditTarget && startEditing(yIdx, yKpi, 'target')}>
                                 <p className="text-[9px] font-black text-slate-400 uppercase mb-0.5">Meta Anual</p>
                                 {isEditTarget ? (
-                                  <div className="flex items-center gap-1.5 h-6">
-                                    <Input autoFocus value={editValue} onChange={e => setEditValue(e.target.value)} className="h-full px-1.5 text-sm font-bold w-full rounded-md" />
-                                    <button className="bg-slate-900 text-white p-1 rounded hover:bg-slate-800" onClick={(e) => { e.stopPropagation(); handleUpdateYearlyGoal(yIdx, baseKpi.id, 'target', Number(editValue)) }}>
-                                      <Check className="w-3 h-3" />
+                                  <div className="flex items-center gap-1.5 h-7">
+                                    <Input autoFocus value={editValue} onChange={e => setEditValue(e.target.value)} className="h-full px-1.5 text-sm font-bold w-full min-w-0 rounded-md" />
+                                    <button className="bg-slate-900 text-white p-1 rounded hover:bg-slate-800 shrink-0" onClick={(e) => { e.stopPropagation(); handleUpdateYearlyGoal(yIdx, baseKpi.id, 'target', Number(editValue)) }}>
+                                      <Check className="w-4 h-4" />
                                     </button>
                                   </div>
                                 ) : (

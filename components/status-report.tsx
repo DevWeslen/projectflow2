@@ -114,20 +114,20 @@ export function StatusReport({ projectId }: StatusReportProps) {
       </style>
       <div className="status-report-container bg-white text-black p-4 min-h-screen font-sans print:p-0 print:m-0 print:min-h-0 flex flex-col gap-3">
       {/* HEADER */}
-      <div className="flex justify-between items-start border-b-4 border-primary pb-2 mb-2">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b-4 border-primary pb-2 mb-2 gap-4 md:gap-0">
+        <div className="flex items-center gap-4 min-w-0 w-full md:w-auto flex-1">
           {/* Faux Logo placeholder */}
-          <div className="w-40 h-16 bg-primary/10 rounded flex items-center justify-center border-2 border-primary">
+          <div className="w-40 h-16 bg-primary/10 rounded flex items-center justify-center border-2 border-primary shrink-0 hidden sm:flex">
             <span className="text-primary font-black uppercase text-xl leading-none tracking-tighter text-center">
               Princesa<br/>Dos Campos
             </span>
           </div>
-          <div className="ml-4">
-            <h1 className="text-3xl font-black uppercase tracking-tight text-primary">Status Report</h1>
-            <h2 className="text-lg font-bold text-gray-500 uppercase mt-0.5">Projeto {project.name}</h2>
+          <div className="ml-0 sm:ml-4 min-w-0 flex-1">
+            <h1 className="text-3xl font-black uppercase tracking-tight text-primary truncate">Status Report</h1>
+            <h2 className="text-lg font-bold text-gray-500 uppercase mt-0.5 truncate" title={project.name}>Projeto {project.name}</h2>
           </div>
         </div>
-        <div className="text-right text-[10px] uppercase font-bold text-gray-600 space-y-0.5">
+        <div className="text-left md:text-right text-[10px] uppercase font-bold text-gray-600 space-y-0.5">
           <p><span className="text-black">Cliente:</span> Expresso Princesa dos Campos</p>
           <p><span className="text-black">Patrocinador:</span> Diretoria</p>
           <p><span className="text-black">Owner:</span> {owner}</p>
@@ -137,7 +137,7 @@ export function StatusReport({ projectId }: StatusReportProps) {
       </div>
 
       {/* TOP METRICS */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* EVOLUÇÃO */}
         <Card className="col-span-2 p-3 border-2 border-black rounded-lg shadow-none flex flex-col">
           <h3 className="text-center font-black uppercase text-xs mb-2">Evolução</h3>
@@ -163,12 +163,12 @@ export function StatusReport({ projectId }: StatusReportProps) {
         </Card>
       </div>
 
-      <div className="flex flex-1 gap-3 min-h-0 pb-4">
+      <div className="flex flex-col md:flex-row flex-1 gap-3 min-h-0 pb-4">
         {/* LEFT COLUMN: GANTT & RISKS */}
-        <div className="flex-[2] flex flex-col gap-3 min-h-0">
+        <div className="flex-[2] flex flex-col gap-3 min-w-0 min-h-0">
           <Card className="flex-[2] p-3 border-2 border-black rounded-lg shadow-none overflow-hidden flex flex-col min-h-[300px]">
             <h3 className="text-center font-black uppercase text-xs mb-2">Cronograma</h3>
-            <div className="w-full flex-1 min-h-0">
+            <div className="w-full flex-1 min-h-0 overflow-x-auto">
               <GanttChart tasks={projectTasks} startDate={ganttStart} endDate={ganttEnd} />
             </div>
           </Card>
@@ -188,7 +188,7 @@ export function StatusReport({ projectId }: StatusReportProps) {
         </div>
 
         {/* RIGHT COLUMN: LISTS */}
-        <div className="flex-1 flex flex-col gap-3 min-h-0">
+        <div className="flex-1 flex flex-col gap-3 min-w-0 min-h-0">
           <Card className="flex-1 p-3 border-2 border-black rounded-lg shadow-none flex flex-col min-h-0">
             <h3 className="text-center font-black uppercase text-xs mb-2">Atividades Realizadas</h3>
             <ul className="list-disc pl-5 text-[9px] space-y-0.5 overflow-hidden flex-1">

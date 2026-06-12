@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react'
 import { Check, X, Calendar, TrendingUp, Save, BarChart3, RefreshCw, AlertTriangle } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -15,6 +16,7 @@ export interface EditingMonthly {
   unit: string
   target: number
   aggregation: 'sum' | 'average'
+  distribution?: 'fraction' | 'global'
   monthly: MonthlyData[]
 }
 
@@ -24,12 +26,41 @@ interface MonthlyKpiDialogProps {
   onSave: (data: EditingMonthly) => void
 }
 
+const FormattedNumberInput = ({ value, onChange, className }: { value: number, onChange: (val: number) => void, className?: string }) => {
+  const [localValue, setLocalValue] = useState(value !== undefined ? value.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) : '')
+  const [isFocused, setIsFocused] = useState(false)
+
+  useEffect(() => {
+    if (!isFocused) {
+      setLocalValue(value !== undefined ? value.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) : '')
+    }
+  }, [value, isFocused])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalValue(e.target.value)
+    const clean = e.target.value.replace(/\./g, '').replace(',', '.')
+    const num = Number(clean)
+    if (!isNaN(num)) {
+      onChange(num)
+    }
+  }
+
+  return (
+    <Input
+      type="text"
+      value={localValue}
+      onChange={handleChange}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      className={className}
+    />
+  )
+}
+
 export function MonthlyKpiDialog({ editingMonthly, setEditingMonthly, onSave }: MonthlyKpiDialogProps) {
   if (!editingMonthly) return null
   
-  const handleMonthChange = (monthIndex: number, field: 'current' | 'target', value: string) => {
-    const numValue = Number(value)
-    
+  const handleMonthChange = (monthIndex: number, field: 'current' | 'target', numValue: number) => {
     // Copy the monthly array
     const newMonthly = [...editingMonthly.monthly]
     const month = { ...newMonthly[monthIndex] }
@@ -43,7 +74,8 @@ export function MonthlyKpiDialog({ editingMonthly, setEditingMonthly, onSave }: 
   }
 
   const handleAutoDistribute = () => {
-    const perMonth = editingMonthly.aggregation === 'sum' 
+    const isFraction = editingMonthly.distribution === 'fraction' || (!editingMonthly.distribution && editingMonthly.aggregation === 'sum')
+    const perMonth = isFraction 
       ? Math.round((editingMonthly.target / 12) * 100) / 100 
       : editingMonthly.target
 
@@ -128,10 +160,10 @@ export function MonthlyKpiDialog({ editingMonthly, setEditingMonthly, onSave }: 
                 <div key={m.monthIndex} className="grid grid-cols-5 gap-2 items-center hover:bg-slate-50 p-1 -mx-1 rounded-lg transition-colors">
                   <span className="col-span-1 font-bold text-slate-600 text-xs text-center">{MONTH_NAMES[m.monthIndex]}</span>
                   <div className="col-span-2 relative">
-                    <Input type="number" value={m.target || ''} onChange={e => handleMonthChange(m.monthIndex, 'target', e.target.value)} className="h-8 text-xs font-bold text-center pl-1 pr-6" />
+                    <FormattedNumberInput value={m.target !== undefined ? m.target : 0} onChange={val => handleMonthChange(m.monthIndex, 'target', val)} className="h-8 text-xs font-bold text-center pl-1 pr-6" />
                   </div>
                   <div className="col-span-2 relative">
-                    <Input type="number" value={m.current || ''} onChange={e => handleMonthChange(m.monthIndex, 'current', e.target.value)} className="h-8 text-xs font-black text-center text-[#006838] border-[#006838]/30 bg-emerald-50/30 pl-1 pr-6" />
+                    <FormattedNumberInput value={m.current !== undefined ? m.current : 0} onChange={val => handleMonthChange(m.monthIndex, 'current', val)} className="h-8 text-xs font-black text-center text-[#006838] border-[#006838]/30 bg-emerald-50/30 pl-1 pr-6" />
                   </div>
                 </div>
               ))}

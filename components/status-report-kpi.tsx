@@ -48,19 +48,19 @@ export function StatusReportKpi({ projectId }: StatusReportKpiProps) {
       </style>
       <div className="status-report-container bg-white text-black p-6 min-h-screen font-sans print:p-0 print:m-0 print:min-h-0">
       {/* HEADER */}
-      <div className="flex justify-between items-start border-b-4 border-[#006838] pb-4 mb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-40 h-16 bg-[#006838]/10 rounded flex items-center justify-center border-2 border-[#006838]">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b-4 border-[#006838] pb-4 mb-6 gap-4 md:gap-0">
+        <div className="flex items-center gap-4 min-w-0 w-full md:w-auto flex-1">
+          <div className="w-40 h-16 bg-[#006838]/10 rounded flex items-center justify-center border-2 border-[#006838] shrink-0 hidden sm:flex">
             <span className="text-[#006838] font-black uppercase text-xl leading-none tracking-tighter text-center">
               Princesa<br/>Dos Campos
             </span>
           </div>
-          <div className="ml-4">
-            <h1 className="text-4xl font-black uppercase tracking-tight text-[#006838]">Status Report de Indicadores</h1>
-            <h2 className="text-xl font-bold text-gray-500 uppercase mt-1">Projeto {project.name}</h2>
+          <div className="ml-0 sm:ml-4 min-w-0 flex-1">
+            <h1 className="text-4xl font-black uppercase tracking-tight text-[#006838] truncate">Status Report de Indicadores</h1>
+            <h2 className="text-xl font-bold text-gray-500 uppercase mt-1 truncate" title={project.name}>Projeto {project.name}</h2>
           </div>
         </div>
-        <div className="text-right text-[10px] uppercase font-bold text-gray-600 space-y-0.5">
+        <div className="text-left md:text-right text-[10px] uppercase font-bold text-gray-600 space-y-0.5">
           <p><span className="text-black">Cliente:</span> Expresso Princesa dos Campos</p>
           <p><span className="text-black">Patrocinador:</span> Diretoria</p>
           <p><span className="text-black">Owner:</span> {owner}</p>
@@ -80,7 +80,7 @@ export function StatusReportKpi({ projectId }: StatusReportKpiProps) {
             <h3 className="font-black uppercase text-sm mb-4 flex items-center gap-2 border-b pb-2">
               <Target className="w-4 h-4" /> Resultados Globais Consolidados
             </h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {kpis.map(kpi => {
                 const percent = kpi.target > 0 ? Math.min((kpi.current / kpi.target) * 100, 100) : 0
                 return (
@@ -115,7 +115,7 @@ export function StatusReportKpi({ projectId }: StatusReportKpiProps) {
                 {yearlyGoals.map(yg => (
                   <div key={yg.id} className="border border-gray-300 rounded-lg p-3">
                     <h4 className="font-black text-lg mb-2">{yg.year}</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                       {kpis.map(baseKpi => {
                         const yKpi = yg.kpis.find(k => k.id === baseKpi.id) || { ...baseKpi, current: 0, target: 0 }
                         const pct = yKpi.target > 0 ? Math.min((yKpi.current / yKpi.target) * 100, 100) : 0
