@@ -146,7 +146,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
       
       // Auto-distribute the new target across the months if target changed
       if (type === 'target' && baseKpi) {
-        const isFraction = baseKpi.distribution === 'fraction' || (!baseKpi.distribution && baseKpi.aggregation === 'sum')
+        const isFraction = true; // Always distribute target evenly across months
         const perMonth = isFraction ? Math.round((value / 12) * 100) / 100 : value
         if (newMonthly) {
           newMonthly = newMonthly.map(m => ({ ...m, target: perMonth }))
@@ -161,7 +161,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
       kpisList[kpiIndex] = { ...currentKpi, [type]: value, monthly: newMonthly }
     } else {
       if (baseKpi) {
-        const isFraction = baseKpi.distribution === 'fraction' || (!baseKpi.distribution && baseKpi.aggregation === 'sum')
+        const isFraction = true; // Always distribute target evenly across months
         const perMonth = isFraction ? Math.round((value / 12) * 100) / 100 : value
         const newMonthly = Array.from({length: 12}).map((_, i) => ({
           monthIndex: i,
@@ -196,7 +196,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
     const defaultMonthly = Array.from({length: 12}).map((_, i) => ({
       monthIndex: i,
       current: 0,
-      target: baseKpi.distribution === 'fraction' ? Math.round((yKpi.target / 12) * 100) / 100 : yKpi.target
+      target: Math.round((yKpi.target / 12) * 100) / 100 // Always fraction the target
     }))
     setEditingMonthly({
       yearGoalId: yearlyGoals[yIdx].id,
@@ -234,9 +234,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
       if (m.target > 0) validTargetMonths++
     })
 
-    const newYearTarget = data.aggregation === 'sum'
-      ? totalMonthlyTarget
-      : (validTargetMonths > 0 ? totalMonthlyTarget / validTargetMonths : 0)
+    const newYearTarget = totalMonthlyTarget // Always sum the monthly targets for the yearly target
 
     const updatedGoals = yearlyGoals.map(yg => {
       if (yg.id !== data.yearGoalId) return yg
