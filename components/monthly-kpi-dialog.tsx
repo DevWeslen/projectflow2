@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Check, X, Calendar, TrendingUp, Save, BarChart3, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Check, X, Calendar, TrendingUp, Save, BarChart3, RefreshCw, AlertTriangle, ArrowDown } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -90,6 +90,32 @@ export function MonthlyKpiDialog({ editingMonthly, setEditingMonthly, onSave }: 
     })
   }
 
+  const handleDistributeRemaining = (fromIndex: number) => {
+    let sumSoFar = 0
+    for (let i = 0; i <= fromIndex; i++) {
+      sumSoFar += (editingMonthly.monthly[i].target || 0)
+    }
+
+    const remainingToDistribute = editingMonthly.target - sumSoFar
+    const monthsLeft = 11 - fromIndex
+
+    if (monthsLeft <= 0) return
+
+    const valuePerMonth = Math.round((remainingToDistribute / monthsLeft) * 100) / 100
+
+    const newMonthly = editingMonthly.monthly.map((m, index) => {
+      if (index > fromIndex) {
+        return { ...m, target: valuePerMonth }
+      }
+      return m
+    })
+
+    setEditingMonthly({
+      ...editingMonthly,
+      monthly: newMonthly
+    })
+  }
+
   // Cálculos de Totais para exibição
   let totalCurrent = 0
   let totalTarget = 0
@@ -155,13 +181,22 @@ export function MonthlyKpiDialog({ editingMonthly, setEditingMonthly, onSave }: 
                 <span className="col-span-2 text-center text-[#006838]">Realizado</span>
               </div>
               {editingMonthly.monthly.map(m => (
-                <div key={m.monthIndex} className="grid grid-cols-5 gap-2 items-center hover:bg-slate-50 p-1 -mx-1 rounded-lg transition-colors">
+                <div key={m.monthIndex} className="grid grid-cols-5 gap-2 items-center group hover:bg-slate-50 p-1 -mx-1 rounded-lg transition-colors">
                   <span className="col-span-1 font-bold text-slate-600 text-xs text-center">{MONTH_NAMES[m.monthIndex]}</span>
-                  <div className="col-span-2 relative">
-                    <FormattedNumberInput value={m.target !== undefined ? m.target : 0} onChange={val => handleMonthChange(m.monthIndex, 'target', val)} className="h-8 text-xs font-bold text-center pl-1 pr-6" />
+                  <div className="col-span-2 relative flex items-center">
+                    <FormattedNumberInput value={m.target !== undefined ? m.target : 0} onChange={val => handleMonthChange(m.monthIndex, 'target', val)} className="h-8 text-xs font-bold text-center pl-1 pr-6 w-full" />
+                    {m.monthIndex < 11 && (
+                      <button 
+                        onClick={() => handleDistributeRemaining(m.monthIndex)}
+                        className="absolute right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-400 hover:text-[#006838] bg-white rounded-md"
+                        title="Redistribuir saldo restante para os próximos meses"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                   <div className="col-span-2 relative">
-                    <FormattedNumberInput value={m.current !== undefined ? m.current : 0} onChange={val => handleMonthChange(m.monthIndex, 'current', val)} className="h-8 text-xs font-black text-center text-[#006838] border-[#006838]/30 bg-emerald-50/30 pl-1 pr-6" />
+                    <FormattedNumberInput value={m.current !== undefined ? m.current : 0} onChange={val => handleMonthChange(m.monthIndex, 'current', val)} className="h-8 text-xs font-black text-center text-[#006838] border-[#006838]/30 bg-emerald-50/30 pl-1 pr-1 w-full" />
                   </div>
                 </div>
               ))}

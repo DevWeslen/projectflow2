@@ -406,7 +406,7 @@ export function ConsolidatedDashboard() {
                           </div>
                         </TableHead>
                       ))}
-                      <TableHead className="min-w-[200px] sticky right-0 z-20 bg-[#006838]/5 text-right font-black text-[#006838] uppercase tracking-wider text-[11px] p-6 border-l-2 border-[#006838]/20 shadow-[-5px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                      <TableHead className="min-w-[200px] sticky right-0 z-20 bg-[#f0f7f4] text-right font-black text-[#006838] uppercase tracking-wider text-[11px] p-6 border-l-2 border-[#006838]/20 shadow-[-5px_0_15px_-3px_rgba(0,0,0,0.05)]">
                         Consolidado
                       </TableHead>
                     </TableRow>
@@ -486,7 +486,7 @@ export function ConsolidatedDashboard() {
                           )
                         })}
 
-                        <TableCell className="p-6 align-top sticky right-0 z-10 bg-[#006838]/5 border-l-2 border-[#006838]/20 group-hover:bg-[#006838]/10 transition-colors shadow-[-5px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                        <TableCell className="p-6 align-top sticky right-0 z-10 bg-[#f0f7f4] border-l-2 border-[#006838]/20 group-hover:bg-[#e6f2eb] transition-colors shadow-[-5px_0_15px_-3px_rgba(0,0,0,0.05)]">
                           <div className="flex flex-col items-end gap-3 pr-2">
                             <div className="flex items-baseline gap-1.5">
                               <span className="text-xl font-black text-[#006838] leading-none">

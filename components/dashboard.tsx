@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { METHODOLOGY_INFO } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,6 +8,13 @@ import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { FolderKanban, ListTodo, CheckCircle2, Clock, TrendingUp, Users } from 'lucide-react'
 import { UserAvatar } from './user-avatar'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface DashboardProps {
   onNewProject: () => void
@@ -19,15 +26,46 @@ export function Dashboard({ onNewProject }: DashboardProps) {
     tasks, 
     calculateProjectProgress, 
     selectProject, 
-    user
+    user,
+    users
   } = useProjectStore()
+
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [selectedOwner, setSelectedOwner] = useState<string>('all')
+  const [showCompleted, setShowCompleted] = useState<boolean>(false)
+
+  const availableYears = useMemo(() => {
+    const years = new Set<number>()
+    projects.forEach((p) => {
+      p.yearlyGoals?.forEach((g: any) => years.add(g.year))
+      if (p.createdAt) years.add(new Date(p.createdAt).getFullYear())
+    })
+    if (years.size === 0) years.add(new Date().getFullYear())
+    return Array.from(years).sort((a, b) => b - a)
+  }, [projects])
 
   const filteredProjects = projects.filter(project => {
     if (!user) return false
-    if (['admin', 'conselho', 'diretoria'].includes(user.role)) return true
-    if (project.ownerId === user.id) return true
-    if (project.memberIds?.includes(user.id)) return true
-    return false
+
+    let hasAccess = false
+    if (['admin', 'conselho', 'diretoria'].includes(user.role)) hasAccess = true
+    else if (project.ownerId === user.id) hasAccess = true
+    else if (project.memberIds?.includes(user.id)) hasAccess = true
+    
+    if (!hasAccess) return false
+
+    if (!showCompleted && project.status === 'completed') return false
+    if (showCompleted && project.status !== 'completed') return false
+
+    const hasGoalInYear = project.yearlyGoals?.some((g: any) => g.year === selectedYear)
+    const wasCreatedInOrBefore = project.createdAt && new Date(project.createdAt).getFullYear() <= selectedYear
+    if (!hasGoalInYear && !wasCreatedInOrBefore) return false
+
+    if (selectedCategory !== 'all' && project.category !== selectedCategory) return false
+    if (selectedOwner !== 'all' && project.ownerId !== selectedOwner) return false
+
+    return true
   })
 
   // Filter tasks based on accessible projects
@@ -63,6 +101,76 @@ export function Dashboard({ onNewProject }: DashboardProps) {
               <FolderKanban className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="truncate">Novo Projeto</span>
             </button>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-4 bg-background/50 backdrop-blur-md p-4 rounded-2xl border border-border/50 shadow-sm">
+          {/* Year Filter */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest hidden sm:block">Ano:</span>
+            <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+              <SelectTrigger className="w-[100px] h-9 text-xs font-bold border-border bg-background">
+                <SelectValue placeholder="Ano" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableYears.map(year => (
+                  <SelectItem key={year} value={year.toString()} className="text-xs font-bold">
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Category Filter */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest hidden sm:block">Cat:</span>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-[140px] h-9 text-xs font-bold border-border bg-background">
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs font-bold">Todas Categorias</SelectItem>
+                {Array.from(new Set(projects.map(p => p.category || 'geral'))).map(cat => (
+                  <SelectItem key={cat} value={cat} className="text-xs font-bold">
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Owner Filter */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest hidden sm:block">Dono:</span>
+            <Select value={selectedOwner} onValueChange={setSelectedOwner}>
+              <SelectTrigger className="w-[160px] h-9 text-xs font-bold border-border bg-background">
+                <SelectValue placeholder="Responsável" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs font-bold">Todos Responsáveis</SelectItem>
+                {users.map(u => (
+                  <SelectItem key={u.id} value={u.id} className="text-xs font-bold">
+                    {u.name.split(' ')[0]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Status Filter */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest hidden sm:block">Status:</span>
+            <Select value={showCompleted ? 'completed' : 'active'} onValueChange={(v) => setShowCompleted(v === 'completed')}>
+              <SelectTrigger className="w-[120px] h-9 text-xs font-bold border-border bg-background">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active" className="text-xs font-bold">Ativos</SelectItem>
+                <SelectItem value="completed" className="text-xs font-bold">Concluídos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

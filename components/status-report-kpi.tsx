@@ -23,29 +23,7 @@ export function StatusReportKpi({ projectId }: StatusReportKpiProps) {
 
   return (
     <>
-      <style type="text/css" media="print">
-        {`
-          @page { size: A4 landscape; margin: 0; }
-          body * { visibility: hidden; }
-          .status-report-container, .status-report-container * {
-            visibility: visible;
-          }
-          .status-report-container {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 297mm !important;
-            height: 209mm !important;
-            margin: 0 !important;
-            padding: 5mm !important;
-            background: white !important;
-            z-index: 999999 !important;
-            box-sizing: border-box !important;
-            overflow: hidden !important;
-            zoom: 0.8;
-          }
-        `}
-      </style>
+
       <div className="status-report-container bg-white text-black p-6 min-h-screen font-sans print:p-0 print:m-0 print:min-h-0">
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b-4 border-[#006838] pb-4 mb-6 gap-4 md:gap-0">

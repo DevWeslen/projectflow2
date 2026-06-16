@@ -112,6 +112,7 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
         methodology,
         color,
         category: category.trim() || 'geral',
+        status: 'active',
         deadline: deadline ? new Date(deadline) : undefined,
         sprintDuration: methodology === 'scrum' ? Number(sprintDuration) : undefined,
         totalSprints: methodology === 'scrum' ? Number(totalSprints) : undefined,

@@ -274,7 +274,7 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
           }}
         >
           {/* Month Header Row */}
-          <div className="sticky left-0 z-30 bg-primary/5 border-b border-border/50 flex items-center p-2 text-[10px] font-black uppercase tracking-widest text-primary print:bg-white print:text-black">
+          <div className="sticky left-0 z-30 bg-primary/5 border-b border-border/50 flex items-center p-2 text-[10px] font-black uppercase tracking-widest text-primary overflow-hidden print:bg-white print:text-black">
             Período
           </div>
           {monthSpans.map((span) => (
@@ -288,7 +288,7 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
           ))}
 
           {/* Day Header Row */}
-          <div className="sticky left-0 z-20 bg-muted/80 backdrop-blur-md border-b border-border/50 flex items-end p-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground print:bg-white print:text-black">
+          <div className="sticky left-0 z-20 bg-muted/80 backdrop-blur-md border-b border-border/50 flex items-end p-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground overflow-hidden print:bg-white print:text-black">
             Atividade
           </div>
           
@@ -319,7 +319,7 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
               <div className="contents" key={task.id}>
                 <div 
                   className={cn(
-                    "sticky left-0 z-10 bg-background print:bg-white border-b border-border/30 px-2 py-1 flex items-center shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] print:shadow-none",
+                    "sticky left-0 z-20 bg-background print:bg-white border-b border-border/30 px-2 py-1 flex items-center shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] print:shadow-none",
                     isMacro ? "pl-2" : "pl-5"
                   )}
                 >
@@ -360,13 +360,12 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
                             !isStart && !isEnd && "-mx-px"
                           )}
                           title={`${task.title} - ${statusInfo.name} (${Math.round(task.progress)}%)`}
-                        >
-                          {isStart && task.duration >= 2 && (
-                            <span className="text-[9px] font-black text-white px-1 whitespace-nowrap overflow-hidden block leading-[24px] drop-shadow-md print:text-white print:drop-shadow-none">
-                              {Math.round(task.progress)}%
-                            </span>
-                          )}
-                        </div>
+                        />
+                      )}
+                      {isTaskDay && isStart && task.duration >= 2 && (
+                        <span className="absolute left-1 top-0 bottom-0 z-30 flex items-center text-[9px] font-black text-white whitespace-nowrap drop-shadow-md pointer-events-none print:text-white">
+                          {Math.round(task.progress)}%
+                        </span>
                       )}
                     </div>
                   )

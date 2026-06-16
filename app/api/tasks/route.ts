@@ -35,7 +35,6 @@ export async function POST(request: Request) {
         deadline: data.deadline ? new Date(data.deadline) : null,
         actualStartDate: data.actualStartDate ? new Date(data.actualStartDate) : null,
         actualEndDate: data.actualEndDate ? new Date(data.actualEndDate) : null,
-        externalOwnerName: data.externalOwnerName,
         sprint: data.sprint
       }
     })

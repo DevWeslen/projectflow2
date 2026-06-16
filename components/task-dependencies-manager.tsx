@@ -39,11 +39,28 @@ export function TaskDependenciesManager({ taskId, projectId }: TaskDependenciesM
     await removeTaskDependency(predId, succId)
   }
 
-  // Riscos: Se uma tarefa predecessora está atrasada (deadline passou ou status não concluído)
-  const isDelayed = (task: any) => {
-    if (task.status === 'done') return false
-    if (!task.deadline) return false
-    return new Date() > new Date(task.deadline)
+  // Riscos: Se uma tarefa predecessora está atrasada (ou se alguma dependência dela está atrasada)
+  const isDelayed = (taskId: string, visited: Set<string> = new Set()): boolean => {
+    if (visited.has(taskId)) return false // Previne loops infinitos
+    visited.add(taskId)
+
+    const task = tasks.find(t => t.id === taskId)
+    if (!task) return false
+
+    // Se a tarefa atual não está concluída e já passou do prazo
+    if (task.status !== 'done' && task.deadline && new Date() > new Date(task.deadline)) {
+      return true
+    }
+
+    // Verifica recursivamente as predecessoras desta tarefa
+    const predecessorsDepsForTask = taskDependencies.filter(d => d.successorId === taskId)
+    for (const dep of predecessorsDepsForTask) {
+      if (isDelayed(dep.predecessorId, visited)) {
+        return true
+      }
+    }
+
+    return false
   }
 
   return (
@@ -88,7 +105,7 @@ export function TaskDependenciesManager({ taskId, projectId }: TaskDependenciesM
               {predecessorsDeps.map(dep => {
                 const pTask = tasks.find(t => t.id === dep.predecessorId)
                 if (!pTask) return null
-                const delayed = isDelayed(pTask)
+                const delayed = isDelayed(pTask.id)
                 const statusInfo = TASK_STATUS_INFO[pTask.status]
 
                 return (

@@ -2,7 +2,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Project, Task, Methodology, TaskStatus, RiskAnalysis, User, UserRole } from './types'
+import type { Project, Task, Methodology, TaskStatus, RiskAnalysis, User, UserRole, TaskDependency } from './types'
 import { autoStatusFromProgress } from './types'
 
 interface ProjectStore {
@@ -492,6 +492,7 @@ export const useProjectStore = create<ProjectStore>()(
           updatedAt: now,
           deadline: new Date(2028, 11, 31),
           category: 'Frota',
+          status: 'active',
           generalKpis: p1Kpis,
           yearlyGoals: mkGoals(p1Kpis, [2026, 2027, 2028], [0.23, 0, 0]),
           ownerId: '3',
@@ -527,6 +528,7 @@ export const useProjectStore = create<ProjectStore>()(
           updatedAt: now,
           deadline: new Date(2026, 11, 31),
           category: 'Operações',
+          status: 'active',
           generalKpis: p2Kpis,
           yearlyGoals: mkGoals(p2Kpis, [2026], [0.84]),
           ownerId: '3',
@@ -564,6 +566,7 @@ export const useProjectStore = create<ProjectStore>()(
           sprintDuration: 2,
           totalSprints: 12,
           category: 'TI',
+          status: 'active',
           generalKpis: p3Kpis,
           yearlyGoals: mkGoals(p3Kpis, [2026, 2027], [0.22, 0]),
           ownerId: '1',
@@ -599,6 +602,7 @@ export const useProjectStore = create<ProjectStore>()(
           updatedAt: now,
           deadline: new Date(2030, 11, 31),
           category: 'Expansão',
+          status: 'active',
           generalKpis: p4Kpis,
           yearlyGoals: mkGoals(p4Kpis, [2026, 2027, 2028, 2029, 2030], [0.16, 0, 0, 0, 0]),
           ownerId: '3',

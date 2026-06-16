@@ -64,7 +64,7 @@ export function StatusReport({ projectId }: StatusReportProps) {
   })
 
   // Attention Points: Delayed tasks with dependents + Risk Analyses
-  const attentionPoints = []
+  const attentionPoints: string[] = []
   
   delayedTasks.forEach(dt => {
     const deps = taskDependencies.filter(dep => dep.predecessorId === dt.id)
@@ -85,33 +85,7 @@ export function StatusReport({ projectId }: StatusReportProps) {
 
   return (
     <>
-      <style type="text/css" media="print">
-        {`
-          @page { size: A4 landscape; margin: 0; }
-          body * { visibility: hidden; }
-          .status-report-container, .status-report-container * {
-            visibility: visible;
-          }
-          .status-report-container {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: calc(297mm / 0.65) !important;
-            height: calc(209mm / 0.65) !important;
-            margin: 0 !important;
-            padding: 8mm !important;
-            background: white !important;
-            z-index: 999999 !important;
-            box-sizing: border-box !important;
-            overflow: hidden !important;
-            transform: scale(0.65) !important;
-            transform-origin: top left !important;
-          }
-          [data-sidebar="sidebar"], [data-slot="sidebar"] {
-            display: none !important;
-          }
-        `}
-      </style>
+
       <div className="status-report-container bg-white text-black p-4 min-h-screen font-sans print:p-0 print:m-0 print:min-h-0 flex flex-col gap-3">
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b-4 border-primary pb-2 mb-2 gap-4 md:gap-0">
