@@ -16,6 +16,7 @@ import { RiskAnalysisView } from './risk-analysis-view'
 import { KpiManagement } from './kpi-management'
 import { ProjectTimeline } from './project-timeline'
 import { UserAvatar, UserAvatarGroup } from './user-avatar'
+import { LogoPrincesa } from './logo-princesa'
 import {
   ArrowLeft,
   Plus,
@@ -143,6 +144,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
               </Button>
 
               <div className="flex items-center gap-3 overflow-hidden">
+                <LogoPrincesa className="h-10 w-20 shrink-0 rounded-none bg-transparent hidden md:block mr-2" />
                 <div
                   className="h-5 w-5 sm:h-6 sm:w-6 rounded-full shadow-lg shadow-black/20 shrink-0"
                   style={{ backgroundColor: project.color }}

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { sendEmail, getProjectEmailTemplate } from '@/lib/email'
 
 export async function GET() {
   try {
@@ -42,6 +43,41 @@ export async function POST(request: Request) {
         status: data.status || 'active'
       }
     })
+
+    // Disparo assíncrono de e-mail (fire-and-forget)
+    void (async () => {
+      try {
+        const userIds = [
+          data.ownerId,
+          ...(data.memberIds || []),
+          ...(data.stakeholderIds || [])
+        ].filter(Boolean); // remove nulls/undefined
+
+        const uniqueUserIds = [...new Set(userIds)];
+
+        if (uniqueUserIds.length > 0) {
+          const users = await prisma.user.findMany({
+            where: { id: { in: uniqueUserIds } },
+            select: { username: true } // username atua como e-mail
+          });
+
+          const emails = users
+            .map((u: { username: string }) => u.username)
+            .filter((email) => email && email.includes('@'));
+
+          if (emails.length > 0) {
+            await sendEmail({
+              to: emails,
+              subject: `Novo Projeto Criado: ${project.name}`,
+              html: getProjectEmailTemplate(project)
+            });
+          }
+        }
+      } catch (emailError) {
+        console.error('[Email] Falha ao enviar e-mail de novo projeto:', emailError);
+      }
+    })();
+
     return NextResponse.json({
       ...project,
       memberIds: JSON.parse(project.memberIds),

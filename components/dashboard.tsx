@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { METHODOLOGY_INFO } from '@/lib/types'
+import { LogoPrincesa } from '@/components/logo-princesa'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
@@ -85,13 +86,16 @@ export function Dashboard({ onNewProject }: DashboardProps) {
     <div className="flex-1 p-6 overflow-auto premium-gradient">
       <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 animate-in-fade pb-10">
         <div className="flex flex-col gap-6 sm:flex-row sm:justify-between sm:items-end">
-          <div className="space-y-1">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight uppercase">
-              Olá, {user?.name.split(' ')[0]}! 👋
-            </h1>
-            <p className="text-muted-foreground text-base sm:text-lg max-w-md">
-              Aqui está a visão geral dos seus projetos e progresso.
-            </p>
+          <div className="flex items-center gap-4">
+            <LogoPrincesa className="h-14 w-28 shrink-0 rounded-none bg-transparent hidden md:block" />
+            <div className="space-y-1">
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight uppercase">
+                Olá, {user?.name.split(' ')[0]}! 👋
+              </h1>
+              <p className="text-muted-foreground text-base sm:text-lg max-w-md">
+                Aqui está a visão geral dos seus projetos e progresso.
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <button
