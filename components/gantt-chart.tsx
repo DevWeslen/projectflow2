@@ -1,11 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { Task, TASK_STATUS_INFO } from '@/lib/types'
+import { useMemo, useState, useRef, useEffect } from 'react'
+import { Task, TaskDependency, TASK_STATUS_INFO } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
-import { CalendarDays, Calendar } from 'lucide-react'
+import { CalendarDays, Calendar as CalendarIcon } from 'lucide-react'
+import { Calendar } from '@/components/ui/calendar'
+import { DateRange } from 'react-day-picker'
 
 const MONTHS = [
   'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
@@ -19,74 +21,48 @@ const MONTHS_FULL = [
 
 interface GanttChartProps {
   tasks: Task[]
+  dependencies?: TaskDependency[]
   startDate: Date
   endDate: Date
 }
 
-export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
-  const currentMonth = new Date().getMonth()
-  const currentYear = new Date().getFullYear()
-  const [selectedMonths, setSelectedMonths] = useState<number[]>([currentMonth])
-
-  // Derive years from project startDate and endDate
-  const projectYears = useMemo(() => {
-    const s = new Date(startDate)
-    const e = new Date(endDate)
-    const startYear = s.getFullYear()
-    const endYear = e.getFullYear()
-    const years: number[] = []
-    for (let y = startYear; y <= endYear; y++) {
-      years.push(y)
-    }
-    if (!years.includes(currentYear)) years.push(currentYear)
-    years.sort((a, b) => a - b)
-    return years
-  }, [startDate, endDate, currentYear])
-
-  const [selectedYears, setSelectedYears] = useState<number[]>(() => {
-    return projectYears.includes(currentYear) ? [currentYear] : [projectYears[0]]
+export function GanttChart({ tasks, dependencies = [], startDate, endDate }: GanttChartProps) {
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(startDate.getFullYear(), startDate.getMonth(), 1),
+    to: new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0)
   })
 
-  const toggleMonth = (month: number) => {
-    setSelectedMonths(prev => {
-      if (prev.includes(month)) {
-        if (prev.length === 1) return prev
-        return prev.filter(m => m !== month).sort((a, b) => a - b)
-      }
-      return [...prev, month].sort((a, b) => a - b)
+  const gridRef = useRef<HTMLDivElement>(null)
+  const [gridWidth, setGridWidth] = useState(0)
+
+  useEffect(() => {
+    if (!gridRef.current) return
+    const observer = new ResizeObserver((entries) => {
+      setGridWidth(entries[0].contentRect.width)
     })
-  }
+    observer.observe(gridRef.current)
+    return () => observer.disconnect()
+  }, [])
 
-  const toggleYear = (year: number) => {
-    setSelectedYears(prev => {
-      if (prev.includes(year)) {
-        if (prev.length === 1) return prev
-        return prev.filter(y => y !== year).sort((a, b) => a - b)
-      }
-      return [...prev, year].sort((a, b) => a - b)
-    })
-  }
-
-  const selectAllMonths = () => setSelectedMonths([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
-  const selectCurrentMonth = () => setSelectedMonths([currentMonth])
-  const selectAllYears = () => setSelectedYears([...projectYears])
-  const selectCurrentYear = () => setSelectedYears([currentYear])
-
-  // Generate array of days for all selected years + months combinations (sorted)
+  // Generate array of days from dateRange
   const days = useMemo(() => {
+    if (!dateRange?.from || !dateRange?.to) return []
     const d: { date: Date; monthIndex: number; year: number }[] = []
-    const sortedYears = [...selectedYears].sort((a, b) => a - b)
-    const sortedMonths = [...selectedMonths].sort((a, b) => a - b)
-    for (const year of sortedYears) {
-      for (const month of sortedMonths) {
-        const daysInMonth = new Date(year, month + 1, 0).getDate()
-        for (let i = 1; i <= daysInMonth; i++) {
-          d.push({ date: new Date(year, month, i), monthIndex: month, year })
-        }
-      }
+    let curr = new Date(dateRange.from)
+    curr.setHours(0,0,0,0)
+    const end = new Date(dateRange.to)
+    end.setHours(23,59,59,999)
+    
+    while (curr <= end) {
+      d.push({
+        date: new Date(curr),
+        monthIndex: curr.getMonth(),
+        year: curr.getFullYear()
+      })
+      curr.setDate(curr.getDate() + 1)
     }
     return d
-  }, [selectedMonths, selectedYears])
+  }, [dateRange])
 
   const gridStart = useMemo(() => {
     if (days.length === 0) return new Date()
@@ -150,131 +126,139 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
     })
   }, [days])
 
-  const monthsLabel = selectedMonths.length === 12
-    ? 'Todos os meses'
-    : selectedMonths.length === 1
-      ? MONTHS_FULL[selectedMonths[0]]
-      : `${selectedMonths.length} meses`
+  const dateRangeLabel = dateRange?.from && dateRange?.to 
+    ? `${dateRange.from.toLocaleDateString('pt-BR')} até ${dateRange.to.toLocaleDateString('pt-BR')}`
+    : 'Selecionar período'
 
-  const yearsLabel = selectedYears.length === projectYears.length && projectYears.length > 1
-    ? 'Todos os anos'
-    : selectedYears.length === 1
-      ? selectedYears[0].toString()
-      : `${selectedYears.length} anos`
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const isDragging = useRef(false)
+  const startX = useRef(0)
+  const scrollLeft = useRef(0)
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollContainerRef.current) return
+    isDragging.current = true
+    startX.current = e.pageX - scrollContainerRef.current.offsetLeft
+    scrollLeft.current = scrollContainerRef.current.scrollLeft
+  }
+
+  const handleMouseLeave = () => {
+    isDragging.current = false
+  }
+
+  const handleMouseUp = () => {
+    isDragging.current = false
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging.current || !scrollContainerRef.current) return
+    e.preventDefault()
+    const x = e.pageX - scrollContainerRef.current.offsetLeft
+    const walk = (x - startX.current) * 1.5 // Scroll speed
+    scrollContainerRef.current.scrollLeft = scrollLeft.current - walk
+  }
 
   return (
     <div className="w-full flex flex-col gap-3">
       {/* Filters */}
       <div className="flex items-center gap-2 print:hidden justify-end flex-wrap">
-        {/* Month multi-select */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="h-8 text-xs font-bold bg-background gap-1.5 min-w-[130px]">
+            <Button variant="outline" className="h-8 text-xs font-bold bg-background gap-1.5 min-w-[200px]">
               <CalendarDays className="h-3.5 w-3.5" />
-              {monthsLabel}
+              {dateRangeLabel}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[240px] p-3" align="end">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Meses</span>
-                <div className="flex gap-1">
-                  <button onClick={selectAllMonths} className="text-[10px] font-bold text-primary hover:underline">Todos</button>
-                  <span className="text-muted-foreground/40">|</span>
-                  <button onClick={selectCurrentMonth} className="text-[10px] font-bold text-primary hover:underline">Atual</button>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {MONTHS_FULL.map((name, i) => (
-                  <button
-                    key={i}
-                    onClick={() => toggleMonth(i)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all border",
-                      selectedMonths.includes(i)
-                        ? "bg-primary/10 border-primary/30 text-primary"
-                        : "bg-background border-border/50 text-muted-foreground hover:bg-secondary/50"
-                    )}
-                  >
-                    <div className={cn(
-                      "h-3 w-3 rounded-sm border flex items-center justify-center shrink-0 transition-colors",
-                      selectedMonths.includes(i) ? "bg-primary border-primary" : "border-muted-foreground/30"
-                    )}>
-                      {selectedMonths.includes(i) && (
-                        <svg className="h-2 w-2 text-white" viewBox="0 0 12 12" fill="none">
-                          <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
-                    </div>
-                    {MONTHS[i]}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-
-        {/* Year multi-select */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="h-8 text-xs font-bold bg-background gap-1.5 min-w-[100px]">
-              <Calendar className="h-3.5 w-3.5" />
-              {yearsLabel}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[180px] p-3" align="end">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Anos</span>
-                {projectYears.length > 1 && (
-                  <div className="flex gap-1">
-                    <button onClick={selectAllYears} className="text-[10px] font-bold text-primary hover:underline">Todos</button>
-                    <span className="text-muted-foreground/40">|</span>
-                    <button onClick={selectCurrentYear} className="text-[10px] font-bold text-primary hover:underline">Atual</button>
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col gap-1.5">
-                {projectYears.map((year) => (
-                  <button
-                    key={year}
-                    onClick={() => toggleYear(year)}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border",
-                      selectedYears.includes(year)
-                        ? "bg-primary/10 border-primary/30 text-primary"
-                        : "bg-background border-border/50 text-muted-foreground hover:bg-secondary/50"
-                    )}
-                  >
-                    <div className={cn(
-                      "h-3.5 w-3.5 rounded-sm border flex items-center justify-center shrink-0 transition-colors",
-                      selectedYears.includes(year) ? "bg-primary border-primary" : "border-muted-foreground/30"
-                    )}>
-                      {selectedYears.includes(year) && (
-                        <svg className="h-2 w-2 text-white" viewBox="0 0 12 12" fill="none">
-                          <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
-                    </div>
-                    {year}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <PopoverContent className="w-auto p-0" align="end">
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={dateRange?.from}
+              selected={dateRange}
+              onSelect={setDateRange}
+              numberOfMonths={2}
+            />
           </PopoverContent>
         </Popover>
       </div>
 
       {/* Gantt Grid */}
-      <div className="w-full overflow-x-auto border border-border/50 rounded-xl bg-background pb-2 scrollbar-thin scrollbar-thumb-primary/20 print:overflow-visible print:border-black">
+      <div 
+        ref={scrollContainerRef}
+        onMouseDown={handleMouseDown}
+        onMouseLeave={handleMouseLeave}
+        onMouseUp={handleMouseUp}
+        onMouseMove={handleMouseMove}
+        className="w-full overflow-x-auto border border-border/50 rounded-xl bg-background pb-2 scrollbar-thin scrollbar-thumb-primary/20 print:overflow-visible print:border-black relative cursor-grab active:cursor-grabbing"
+      >
         <div 
-          className="min-w-max grid print:min-w-0 print:w-full" 
+          ref={gridRef}
+          className="min-w-max grid relative select-none" 
           style={{ 
-            gridTemplateColumns: `minmax(180px, 220px) repeat(${days.length}, minmax(16px, 1fr))` 
+            gridTemplateColumns: `220px repeat(${days.length}, 20px)` 
           }}
         >
+          {/* SVGs for dependencies */}
+          <svg className="absolute inset-0 pointer-events-none z-10 print:block" width="100%" height="100%" style={{ overflow: 'visible' }}>
+            <defs>
+              <marker
+                id="arrowhead"
+                markerWidth="4"
+                markerHeight="3"
+                refX="4"
+                refY="1.5"
+                orient="auto"
+                className="fill-slate-400 print:fill-slate-500"
+              >
+                <polygon points="0 0, 4 1.5, 0 3" />
+              </marker>
+            </defs>
+            {dependencies.map(dep => {
+              const predIdx = chartTasks.findIndex(t => t.id === dep.predecessorId)
+              const succIdx = chartTasks.findIndex(t => t.id === dep.successorId)
+              if (predIdx === -1 || succIdx === -1) return null
+
+              const pred = chartTasks[predIdx]
+              const succ = chartTasks[succIdx]
+
+              // Calculate start coordinates (right side of predecessor bar)
+              const startX = 220 + (pred.endCol * 20)
+              const startY = 64 + (predIdx * 25) + 12.5
+
+              // Calculate end coordinates (left side of successor bar)
+              const endX = 220 + ((succ.startCol - 1) * 20)
+              const endY = 64 + (succIdx * 25) + 12.5
+
+              if (!gridWidth) return null;
+              
+              let path = '';
+              if (endX >= startX + 10) {
+                // Successor is to the right
+                const midX = startX + 8;
+                path = `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX - 2} ${endY}`;
+              } else {
+                // Successor is to the left or directly below (route around)
+                const midX1 = startX + 8;
+                const midY = startY + 12; // halfway down to next row
+                const midX2 = endX - 8;
+                path = `M ${startX} ${startY} L ${midX1} ${startY} L ${midX1} ${midY} L ${midX2} ${midY} L ${midX2} ${endY} L ${endX - 2} ${endY}`;
+              }
+
+              return (
+                <path
+                  key={dep.id}
+                  d={path}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  className="text-slate-400 print:text-slate-500"
+                  markerEnd="url(#arrowhead)"
+                />
+              )
+            })}
+          </svg>
           {/* Month Header Row */}
-          <div className="sticky left-0 z-30 bg-primary/5 border-b border-border/50 flex items-center p-2 text-[10px] font-black uppercase tracking-widest text-primary overflow-hidden print:bg-white print:text-black">
+          <div className="sticky left-0 z-30 bg-background border-b border-border/50 flex items-center p-2 text-[10px] font-black uppercase tracking-widest text-primary overflow-hidden print:bg-white print:text-black">
             Período
           </div>
           {monthSpans.map((span) => (
@@ -288,7 +272,7 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
           ))}
 
           {/* Day Header Row */}
-          <div className="sticky left-0 z-20 bg-muted/80 backdrop-blur-md border-b border-border/50 flex items-end p-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground overflow-hidden print:bg-white print:text-black">
+          <div className="sticky left-0 z-20 bg-background border-b border-border/50 flex items-end p-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground overflow-hidden print:bg-white print:text-black print:backdrop-blur-none">
             Atividade
           </div>
           
@@ -310,10 +294,29 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
             )
           })}
 
+          {/* Background Vertical Lines (Optimized) */}
+          {days.map((d, i) => {
+            const isWeekend = d.date.getDay() === 0 || d.date.getDay() === 6
+            const isFirstOfMonth = d.date.getDate() === 1 && i > 0
+            return (
+              <div 
+                key={`bg-${i}`} 
+                className={cn(
+                  "pointer-events-none z-0",
+                  isFirstOfMonth && "border-l-2 border-l-primary/30",
+                  !isFirstOfMonth && "border-l border-l-border/10",
+                  isWeekend && "bg-muted/10 print:hidden"
+                )}
+                style={{ gridColumn: i + 2, gridRow: `3 / span ${Math.max(1, chartTasks.length)}` }}
+              />
+            )
+          })}
+
           {/* Task Rows */}
-          {chartTasks.map((task) => {
+          {chartTasks.map((task, index) => {
             const statusInfo = TASK_STATUS_INFO[task.status]
             const isMacro = task.parentId === null
+            const rowIdx = index + 3
             
             return (
               <div className="contents" key={task.id}>
@@ -322,6 +325,7 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
                     "sticky left-0 z-20 bg-background print:bg-white border-b border-border/30 px-2 py-1 flex items-center shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] print:shadow-none",
                     isMacro ? "pl-2" : "pl-5"
                   )}
+                  style={{ gridColumn: 1, gridRow: rowIdx }}
                 >
                   <div className="truncate w-full text-[9px] font-bold" title={task.title}>
                     {isMacro ? (
@@ -332,44 +336,30 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
                   </div>
                 </div>
 
-                {days.map((d, i) => {
-                  const isWeekend = d.date.getDay() === 0 || d.date.getDay() === 6
-                  const isFirstOfMonth = d.date.getDate() === 1 && i > 0
-                  const colIndex = i + 1
-                  const isTaskDay = colIndex >= task.startCol && colIndex <= task.endCol
-                  const isStart = colIndex === task.startCol
-                  const isEnd = colIndex === task.endCol
-
-                  return (
+                <div 
+                  className="relative h-6 flex items-center border-b border-border/10"
+                  style={{ gridColumn: `2 / span ${days.length}`, gridRow: rowIdx }}
+                >
+                  {task.startCol <= days.length && task.endCol >= 1 && (
                     <div 
-                      key={i} 
                       className={cn(
-                        "border-b border-border/10 relative h-6 flex items-center",
-                        isFirstOfMonth && "border-l-2 border-l-primary/30",
-                        !isFirstOfMonth && "border-l border-l-border/10",
-                        isWeekend && "bg-muted/10"
+                        "absolute inset-y-0.5 z-10 rounded-sm",
+                        statusInfo.color.replace('text-', 'bg-').replace('/20', '/80')
                       )}
+                      style={{
+                        left: `${(Math.max(1, task.startCol) - 1) * 20}px`,
+                        width: `${(Math.min(days.length, task.endCol) - Math.max(1, task.startCol) + 1) * 20}px`
+                      }}
+                      title={`${task.title} - ${statusInfo.name} (${Math.round(task.progress)}%)`}
                     >
-                      {isTaskDay && (
-                        <div 
-                          className={cn(
-                            "absolute inset-y-0.5 w-[105%] z-0",
-                            statusInfo.color.replace('text-', 'bg-').replace('/20', '/80'),
-                            isStart && "rounded-l-sm ml-0.5",
-                            isEnd && "rounded-r-sm mr-0.5",
-                            !isStart && !isEnd && "-mx-px"
-                          )}
-                          title={`${task.title} - ${statusInfo.name} (${Math.round(task.progress)}%)`}
-                        />
-                      )}
-                      {isTaskDay && isStart && task.duration >= 2 && (
-                        <span className="absolute left-1 top-0 bottom-0 z-30 flex items-center text-[9px] font-black text-white whitespace-nowrap drop-shadow-md pointer-events-none print:text-white">
+                      {task.duration >= 2 && (
+                        <span className="absolute left-1 top-0 bottom-0 flex items-center text-[9px] font-black text-white whitespace-nowrap drop-shadow-md pointer-events-none print:text-white">
                           {Math.round(task.progress)}%
                         </span>
                       )}
                     </div>
-                  )
-                })}
+                  )}
+                </div>
               </div>
             )
           })}

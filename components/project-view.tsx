@@ -37,7 +37,8 @@ import {
   Layers,
   History,
   Users,
-  CheckCircle2
+  CheckCircle2,
+  Loader2
 } from 'lucide-react'
 import { exportProjectToCSV, exportRiskToCSV, exportFullProjectToCSV } from '@/lib/export-utils'
 import { ProjectReport } from './project-report'
@@ -85,6 +86,102 @@ export function ProjectView({ projectId }: ProjectViewProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
+  const [isPrinting, setIsPrinting] = useState(false)
+
+  const handlePrint = () => {
+    setIsPrinting(true)
+
+    const reportEl = document.getElementById('status-report-content')
+    if (!reportEl) {
+      window.print()
+      setIsPrinting(false)
+      return
+    }
+
+    // Clone so we don't modify the live DOM
+    const clone = reportEl.cloneNode(true) as HTMLElement
+
+    // 1) Hide the interactive (screen-only) Gantt card — it has print:hidden but
+    //    Tailwind utility classes may not be recognised in the popup window.
+    //    The card is the first Card inside the left column that contains GanttChart.
+    //    It carries the class "print:hidden" — let's find it by that class.
+    clone.querySelectorAll('[class*="print:hidden"]').forEach(el => {
+      (el as HTMLElement).style.display = 'none'
+    })
+
+    // 2) Also hide the fullscreen overlay if it was open
+    clone.querySelectorAll('[class*="z-\\[9999\\]"]').forEach(el => {
+      (el as HTMLElement).style.display = 'none'
+    })
+
+    // 3) Force the print-gantt-page to be visible and on its own page
+    const printGanttEl = clone.querySelector('.print-gantt-page') as HTMLElement | null
+    if (printGanttEl) {
+      printGanttEl.style.cssText = [
+        'display: flex !important',
+        'flex-direction: column',
+        'width: 100%',
+        'height: 96vh',
+        'page-break-before: always',
+        'break-before: page',
+        'padding: 4px',
+        'box-sizing: border-box',
+        'overflow: hidden',
+      ].join('; ')
+    }
+
+    // 4) Force page-break-after on status-report-container
+    const container = clone.querySelector('.status-report-container') as HTMLElement | null
+    if (container) {
+      container.style.pageBreakAfter = 'always'
+      container.style.breakAfter = 'page'
+    }
+
+    // Grab all the CSS from the current page
+    const styleSheets = Array.from(document.styleSheets)
+      .map(sheet => {
+        try {
+          return Array.from(sheet.cssRules).map(rule => rule.cssText).join('\n')
+        } catch {
+          return sheet.href ? `@import url('${sheet.href}');` : ''
+        }
+      })
+      .join('\n')
+
+    const printWindow = window.open('', '_blank', 'width=1400,height=900')
+    if (!printWindow) {
+      window.print()
+      setIsPrinting(false)
+      return
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Status Report</title>
+          <style>
+            ${styleSheets}
+            @page { size: A4 landscape; margin: 0; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+            html, body { margin: 0; padding: 0; background: white; width: 100%; }
+          </style>
+        </head>
+        <body>
+          ${clone.innerHTML}
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+
+    setTimeout(() => {
+      printWindow.print()
+      printWindow.close()
+      setIsPrinting(false)
+    }, 1000)
+  }
+
 
   // Default view based on methodology
   const [view, setView] = useState<ViewMode>(() => {
@@ -128,7 +225,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
   const isOwnerOrAdmin = user?.role === 'admin' || user?.role === 'conselho' || user?.role === 'diretoria' || project.ownerId === user?.id
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden premium-gradient">
+    <div className="flex-1 flex flex-col overflow-hidden print:overflow-visible print:bg-white premium-gradient">
       {/* Header */}
       {!isExpanded && (
         <header className="border-b border-border/50 glass p-4 sm:p-5 relative z-10 animate-in slide-in-from-top duration-500">
@@ -278,11 +375,11 @@ export function ProjectView({ projectId }: ProjectViewProps) {
         </header>
       )}
 
-      <div className={cn("flex-1 overflow-auto p-6 scrollbar-hide transition-all duration-500", isExpanded ? "pt-2" : "pt-6")}>
+      <div className={cn("flex-1 overflow-auto print:overflow-visible p-6 print:p-0 scrollbar-hide transition-all duration-500", isExpanded ? "pt-2" : "pt-6")}>
         <div className={cn("max-w-7xl mx-auto space-y-6 animate-in-fade", isExpanded && "space-y-0")}>
           {/* Stats */}
           {!isExpanded && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 animate-in slide-in-from-top duration-500">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 animate-in slide-in-from-top duration-500 print:hidden">
               <Card className="glass-card group hover:border-primary/50 transition-all">
                 <CardContent className="py-6 pt-6">
                   <div className="flex items-center gap-4">
@@ -355,7 +452,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
 
           {/* Progress Bar & View Switcher */}
           {!isExpanded && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top duration-700">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top duration-700 print:hidden">
               <Card className="glass-card overflow-hidden">
                 <CardContent className="p-6">
                   <div className="space-y-4">
@@ -455,8 +552,8 @@ export function ProjectView({ projectId }: ProjectViewProps) {
             ) : view === 'kpi' ? (
               <KpiManagement projectId={projectId} />
             ) : (
-              <Card className={cn("glass-card border-none shadow-xl transition-all duration-500", isExpanded && "shadow-2xl ring-1 ring-white/10")}>
-                <CardHeader className="pb-4 border-b border-white/5">
+              <Card className={cn("glass-card border-none shadow-xl transition-all duration-500 print:shadow-none print:border-none", isExpanded && "shadow-2xl ring-1 ring-white/10")}>
+                <CardHeader className="pb-4 border-b border-white/5 print:hidden">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg font-bold flex items-center gap-2">
                       {view === 'tree' && <><ListTree className="h-5 w-5 text-primary" /> Estrutura do Projeto</>}
@@ -513,23 +610,53 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                   {view === 'status-report' && (
                     <div className="relative">
                       <div className="flex justify-end p-4 border-b border-border/50 print:hidden">
-                        <Button onClick={() => window.print()} className="bg-primary text-white shadow-lg">
-                          <Download className="h-4 w-4 mr-2" />
-                          Baixar PDF
+                        <Button 
+                          onClick={handlePrint}
+                          disabled={isPrinting}
+                          className="bg-primary text-white shadow-lg min-w-[140px]"
+                        >
+                          {isPrinting ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Preparando...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="h-4 w-4 mr-2" />
+                              Baixar PDF
+                            </>
+                          )}
                         </Button>
                       </div>
-                      <StatusReport projectId={projectId} />
+                      <div id="status-report-content">
+                        <StatusReport projectId={projectId} />
+                      </div>
                     </div>
                   )}
                   {view === 'status-report-kpi' && (
                     <div className="relative">
                       <div className="flex justify-end p-4 border-b border-border/50 print:hidden">
-                        <Button onClick={() => window.print()} className="bg-primary text-white shadow-lg">
-                          <Download className="h-4 w-4 mr-2" />
-                          Baixar PDF
+                        <Button 
+                          onClick={handlePrint}
+                          disabled={isPrinting}
+                          className="bg-primary text-white shadow-lg min-w-[140px]"
+                        >
+                          {isPrinting ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Preparando...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="h-4 w-4 mr-2" />
+                              Baixar PDF
+                            </>
+                          )}
                         </Button>
                       </div>
-                      <StatusReportKpi projectId={projectId} />
+                      <div id="status-report-kpi-content">
+                        <StatusReportKpi projectId={projectId} />
+                      </div>
                     </div>
                   )}
                 </CardContent>

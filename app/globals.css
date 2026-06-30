@@ -181,6 +181,11 @@
   }
 }
 
+/* Hide print-only elements on screen */
+.print-gantt-page {
+  display: none;
+}
+
 @media print {
   @page {
     size: A4 landscape;
@@ -201,7 +206,7 @@
     display: none !important;
   }
 
-  /* Hide all buttons EXCEPT those inside the status report content */
+  /* Hide all buttons */
   button:not([data-print-keep]) {
     display: none !important;
   }
@@ -216,14 +221,12 @@
   }
 
   html, body {
-    width: 297mm !important;
-    height: 209mm !important;
+    width: 100% !important;
     background: white !important;
     color: black !important;
     font-size: 10px !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow: hidden !important;
   }
   
   .glass, .glass-card {
@@ -238,10 +241,9 @@
     position: static !important;
     padding: 0 !important;
     margin: 0 !important;
-    width: 297mm !important;
-    max-width: 297mm !important;
-    height: 209mm !important;
-    max-height: 209mm !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
     transform: none !important;
     border: none !important;
     box-shadow: none !important;
@@ -256,23 +258,31 @@
     page-break-before: always;
   }
 
-  /* Status report specific: force it to fill exactly ONE page */
-  .status-report-container {
-    position: relative !important;
-    top: auto !important;
-    left: auto !important;
-    z-index: 1 !important;
-    padding: 10mm !important;
-    margin: 0 auto !important;
-    width: 297mm !important;
+  /* Gantt chart dedicated print page - shown on print only */
+  .print-gantt-page {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100vw !important;
+    height: 96vh !important;
+    page-break-before: always !important;
+    break-before: page !important;
+    padding: 4px !important;
     box-sizing: border-box !important;
-    background: white !important;
-    page-break-after: always;
+    margin: 0 !important;
   }
 
-  /* Prevent elements inside from causing a page break */
-  .status-report-container * {
-    page-break-inside: avoid !important;
+  /* Status report page 1: no extra padding (removes side borders) */
+  .status-report-container {
+    position: static !important;
+    padding: 4mm !important;
+    margin: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    background: white !important;
+    /* Allow page break AFTER this container so Gantt goes to page 2 */
+    page-break-after: always !important;
+    break-after: page !important;
+    overflow: visible !important;
   }
 
   .status-report-container h1 {
