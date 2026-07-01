@@ -42,8 +42,9 @@ import {
 } from 'lucide-react'
 import { exportProjectToCSV, exportRiskToCSV, exportFullProjectToCSV } from '@/lib/export-utils'
 import { ProjectReport } from './project-report'
-import { StatusReport } from './status-report'
-import { StatusReportKpi } from './status-report-kpi'
+import dynamic from 'next/dynamic'
+const StatusReport = dynamic(() => import('./status-report').then(mod => mod.StatusReport), { ssr: false })
+const StatusReportKpi = dynamic(() => import('./status-report-kpi').then(mod => mod.StatusReportKpi), { ssr: false })
 import { ProjectSettingsDialog } from './project-settings-dialog'
 import {
   DropdownMenu,
@@ -90,98 +91,11 @@ export function ProjectView({ projectId }: ProjectViewProps) {
 
   const handlePrint = () => {
     setIsPrinting(true)
-
-    const reportEl = document.getElementById('status-report-content')
-    if (!reportEl) {
-      window.print()
-      setIsPrinting(false)
-      return
-    }
-
-    // Clone so we don't modify the live DOM
-    const clone = reportEl.cloneNode(true) as HTMLElement
-
-    // 1) Hide the interactive (screen-only) Gantt card — it has print:hidden but
-    //    Tailwind utility classes may not be recognised in the popup window.
-    //    The card is the first Card inside the left column that contains GanttChart.
-    //    It carries the class "print:hidden" — let's find it by that class.
-    clone.querySelectorAll('[class*="print:hidden"]').forEach(el => {
-      (el as HTMLElement).style.display = 'none'
-    })
-
-    // 2) Also hide the fullscreen overlay if it was open
-    clone.querySelectorAll('[class*="z-\\[9999\\]"]').forEach(el => {
-      (el as HTMLElement).style.display = 'none'
-    })
-
-    // 3) Force the print-gantt-page to be visible and on its own page
-    const printGanttEl = clone.querySelector('.print-gantt-page') as HTMLElement | null
-    if (printGanttEl) {
-      printGanttEl.style.cssText = [
-        'display: flex !important',
-        'flex-direction: column',
-        'width: 100%',
-        'height: 96vh',
-        'page-break-before: always',
-        'break-before: page',
-        'padding: 4px',
-        'box-sizing: border-box',
-        'overflow: hidden',
-      ].join('; ')
-    }
-
-    // 4) Force page-break-after on status-report-container
-    const container = clone.querySelector('.status-report-container') as HTMLElement | null
-    if (container) {
-      container.style.pageBreakAfter = 'always'
-      container.style.breakAfter = 'page'
-    }
-
-    // Grab all the CSS from the current page
-    const styleSheets = Array.from(document.styleSheets)
-      .map(sheet => {
-        try {
-          return Array.from(sheet.cssRules).map(rule => rule.cssText).join('\n')
-        } catch {
-          return sheet.href ? `@import url('${sheet.href}');` : ''
-        }
-      })
-      .join('\n')
-
-    const printWindow = window.open('', '_blank', 'width=1400,height=900')
-    if (!printWindow) {
-      window.print()
-      setIsPrinting(false)
-      return
-    }
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>Status Report</title>
-          <style>
-            ${styleSheets}
-            @page { size: A4 landscape; margin: 0; }
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
-            html, body { margin: 0; padding: 0; background: white; width: 100%; }
-          </style>
-        </head>
-        <body>
-          ${clone.innerHTML}
-        </body>
-      </html>
-    `)
-    printWindow.document.close()
-
     setTimeout(() => {
-      printWindow.print()
-      printWindow.close()
+      window.print()
       setIsPrinting(false)
-    }, 1000)
+    }, 100)
   }
-
 
   // Default view based on methodology
   const [view, setView] = useState<ViewMode>(() => {
@@ -552,7 +466,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
             ) : view === 'kpi' ? (
               <KpiManagement projectId={projectId} />
             ) : (
-              <Card className={cn("glass-card border-none shadow-xl transition-all duration-500 print:shadow-none print:border-none", isExpanded && "shadow-2xl ring-1 ring-white/10")}>
+              <Card className={cn("glass-card border-none shadow-xl transition-all duration-500 print:shadow-none print:border-none print:overflow-visible print:block", isExpanded && "shadow-2xl ring-1 ring-white/10")}>
                 <CardHeader className="pb-4 border-b border-white/5 print:hidden">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg font-bold flex items-center gap-2">
@@ -582,7 +496,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent className="p-0 print:overflow-visible print:block">
                   {view === 'tree' && (
                     <div className="p-4 sm:p-6">
                       <TaskTree
@@ -609,25 +523,6 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                   )}
                   {view === 'status-report' && (
                     <div className="relative">
-                      <div className="flex justify-end p-4 border-b border-border/50 print:hidden">
-                        <Button 
-                          onClick={handlePrint}
-                          disabled={isPrinting}
-                          className="bg-primary text-white shadow-lg min-w-[140px]"
-                        >
-                          {isPrinting ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Preparando...
-                            </>
-                          ) : (
-                            <>
-                              <Download className="h-4 w-4 mr-2" />
-                              Baixar PDF
-                            </>
-                          )}
-                        </Button>
-                      </div>
                       <div id="status-report-content">
                         <StatusReport projectId={projectId} />
                       </div>
@@ -635,25 +530,6 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                   )}
                   {view === 'status-report-kpi' && (
                     <div className="relative">
-                      <div className="flex justify-end p-4 border-b border-border/50 print:hidden">
-                        <Button 
-                          onClick={handlePrint}
-                          disabled={isPrinting}
-                          className="bg-primary text-white shadow-lg min-w-[140px]"
-                        >
-                          {isPrinting ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Preparando...
-                            </>
-                          ) : (
-                            <>
-                              <Download className="h-4 w-4 mr-2" />
-                              Baixar PDF
-                            </>
-                          )}
-                        </Button>
-                      </div>
                       <div id="status-report-kpi-content">
                         <StatusReportKpi projectId={projectId} />
                       </div>

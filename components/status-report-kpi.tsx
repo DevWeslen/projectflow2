@@ -24,35 +24,32 @@ export function StatusReportKpi({ projectId }: StatusReportKpiProps) {
   return (
     <>
 
-      <div className="status-report-container bg-white text-black p-6 min-h-screen font-sans print:p-0 print:m-0 print:min-h-0">
+      <div className="status-report-container bg-white text-black font-sans">
       {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b-4 border-[#006838] pb-4 mb-6 gap-4 md:gap-0">
-        <div className="flex items-center gap-4 min-w-0 w-full md:w-auto flex-1">
-          <div className="w-40 h-16 bg-[#006838]/10 rounded flex items-center justify-center border-2 border-[#006838] shrink-0 hidden sm:flex">
-            <span className="text-[#006838] font-black uppercase text-xl leading-none tracking-tighter text-center">
-              Princesa<br/>Dos Campos
-            </span>
-          </div>
-          <div className="ml-0 sm:ml-4 min-w-0 flex-1">
-            <h1 className="text-4xl font-black uppercase tracking-tight text-[#006838] truncate">Status Report de Indicadores</h1>
-            <h2 className="text-xl font-bold text-gray-500 uppercase mt-1 truncate" title={project.name}>Projeto {project.name}</h2>
-          </div>
+      <div style={{ background: '#006838', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px' }}>
+        <div>
+          <div style={{ fontSize: 24, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1.1 }}>Status Report de Indicadores</div>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', opacity: 0.85, marginTop: 2 }}>Projeto {project.name}</div>
         </div>
-        <div className="text-left md:text-right text-[10px] uppercase font-bold text-gray-600 space-y-0.5">
-          <p><span className="text-black">Cliente:</span> Expresso Princesa dos Campos</p>
-          <p><span className="text-black">Patrocinador:</span> Diretoria</p>
-          <p><span className="text-black">Owner:</span> {owner}</p>
-          <p><span className="text-black">Início do Projeto:</span> {start.toLocaleDateString('pt-BR')}</p>
-          <p><span className="text-black">Go Live:</span> {end ? end.toLocaleDateString('pt-BR') : 'Não definido'}</p>
+        <div style={{ background: 'white', borderRadius: 6, padding: '4px 10px', minWidth: 110, textAlign: 'center' }}>
+          <span style={{ color: '#006838', fontWeight: 900, textTransform: 'uppercase', fontSize: 13, lineHeight: 1.2, display: 'block' }}>Princesa<br/>Dos Campos</span>
         </div>
+      </div>
+      {/* INFO BAR */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 24, padding: '6px 16px', borderBottom: '2px solid #006838', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: '#333' }}>
+        <span><b>Cliente:</b> Expresso Princesa dos Campos</span>
+        <span><b>Patrocinador:</b> Diretoria</span>
+        <span><b>Owner:</b> {owner}</span>
+        <span><b>Início do Projeto:</b> {start.toLocaleDateString('pt-BR')}</span>
+        <span><b>Go Live:</b> {end ? end.toLocaleDateString('pt-BR') : 'Não definido'}</span>
       </div>
 
       {kpis.length === 0 ? (
-        <div className="p-12 text-center text-gray-500 italic border-2 border-dashed border-gray-200 rounded-xl">
+        <div className="p-12 text-center text-gray-500 italic border-2 border-dashed border-gray-200 rounded-xl mx-4 mt-4">
           Nenhum indicador registrado neste projeto.
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-6 p-4">
           {/* Globais */}
           <Card className="p-4 border-2 border-black rounded-lg shadow-none">
             <h3 className="font-black uppercase text-sm mb-4 flex items-center gap-2 border-b pb-2">

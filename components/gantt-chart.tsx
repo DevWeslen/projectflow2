@@ -189,7 +189,7 @@ export function GanttChart({ tasks, dependencies = [], startDate, endDate }: Gan
         onMouseLeave={handleMouseLeave}
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
-        className="w-full overflow-x-auto border border-border/50 rounded-xl bg-background pb-2 scrollbar-thin scrollbar-thumb-primary/20 print:overflow-visible print:border-black relative cursor-grab active:cursor-grabbing"
+        className="w-full overflow-x-auto border border-border/50 rounded-xl bg-background pb-2 scrollbar-thin scrollbar-thumb-primary/20 print:overflow-visible print:border-none relative cursor-grab active:cursor-grabbing"
       >
         <div 
           ref={gridRef}

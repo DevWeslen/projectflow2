@@ -146,9 +146,9 @@ export const METHODOLOGY_INFO: Record<Methodology, { name: string; description: 
 
 export const TASK_STATUS_INFO: Record<TaskStatus, { name: string; color: string }> = {
   'todo': { name: 'A Fazer', color: 'bg-muted text-muted-foreground' },
-  'in-progress': { name: 'Em Progresso', color: 'bg-primary/20 text-primary' },
+  'in-progress': { name: 'Em Progresso', color: 'bg-accent/20 text-accent' },
   'review': { name: 'Em Revisão', color: 'bg-warning/20 text-warning-foreground' },
-  'done': { name: 'Concluído', color: 'bg-accent/20 text-accent' }
+  'done': { name: 'Concluído', color: 'bg-primary/20 text-primary' }
 }
 
 export const PROJECT_COLORS = [
