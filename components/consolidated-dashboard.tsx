@@ -128,8 +128,7 @@ export function ConsolidatedDashboard() {
       k.unit === 'R$'
     ).forEach((k: KPI) => { globalTarget += k.target; globalCurrent += k.current })
   })
-  if (globalTarget === 0) { globalTarget = 42800000; globalCurrent = 7690000 }
-  const globalPct = Math.round((globalCurrent / globalTarget) * 100)
+  const globalPct = globalTarget > 0 ? Math.round((globalCurrent / globalTarget) * 100) : 0
 
   // ── Project-level stats ──────────────────────────────────────
   const totalTasks = filteredTasks.length
