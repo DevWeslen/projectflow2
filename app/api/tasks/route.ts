@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { sendEmail, getTaskEmailTemplate } from '@/lib/email'
 
 export async function GET() {
   try {
@@ -35,10 +36,49 @@ export async function POST(request: Request) {
         deadline: data.deadline ? new Date(data.deadline) : null,
         actualStartDate: data.actualStartDate ? new Date(data.actualStartDate) : null,
         actualEndDate: data.actualEndDate ? new Date(data.actualEndDate) : null,
-        externalOwnerName: data.externalOwnerName,
         sprint: data.sprint
       }
     })
+
+    // Disparo assíncrono de e-mail (fire-and-forget)
+    void (async () => {
+      try {
+        const userIds = [
+          data.ownerId,
+          ...(data.stakeholderIds || [])
+        ].filter(Boolean)
+
+        const uniqueUserIds = [...new Set(userIds)]
+
+        if (uniqueUserIds.length > 0) {
+          const users = await prisma.user.findMany({
+            where: { id: { in: uniqueUserIds } },
+            select: { username: true }
+          })
+
+          const emails = users
+            .map((u: { username: string }) => u.username)
+            .filter((email) => email && email.includes('@'))
+
+          if (emails.length > 0) {
+            const project = await prisma.project.findUnique({
+              where: { id: task.projectId },
+              select: { name: true }
+            })
+            const projectName = project ? project.name : 'Sem Projeto'
+
+            await sendEmail({
+              to: emails,
+              subject: `Nova Tarefa Atribuída: ${task.title}`,
+              html: getTaskEmailTemplate(task, projectName)
+            })
+          }
+        }
+      } catch (emailError) {
+        console.error('[Email] Falha ao enviar e-mail de nova tarefa:', emailError)
+      }
+    })()
+
     return NextResponse.json({
       ...task,
       stakeholderIds: JSON.parse(task.stakeholderIds || '[]'),
@@ -47,7 +87,6 @@ export async function POST(request: Request) {
     })
   } catch (error: any) {
     console.error('ERROR CREATING TASK:', error)
-    // Return more specific error if possible
     const errorMessage = error.message || 'Failed to create task'
     return NextResponse.json({ error: errorMessage }, { status: 500 })
   }

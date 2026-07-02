@@ -2,12 +2,13 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Project, Task, Methodology, TaskStatus, RiskAnalysis, User, UserRole } from './types'
+import type { Project, Task, Methodology, TaskStatus, RiskAnalysis, User, UserRole, TaskDependency } from './types'
 import { autoStatusFromProgress } from './types'
 
 interface ProjectStore {
   projects: Project[]
   tasks: Task[]
+  taskDependencies: TaskDependency[]
   riskAnalyses: RiskAnalysis[]
   selectedProjectId: string | null
 
@@ -19,6 +20,9 @@ interface ProjectStore {
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'order'>) => Promise<string | null>
   updateTask: (id: string, updates: Partial<Task>) => Promise<boolean>
   deleteTask: (id: string) => void
+
+  addTaskDependency: (predecessorId: string, successorId: string, type?: string) => Promise<boolean>
+  removeTaskDependency: (predecessorId: string, successorId: string) => Promise<boolean>
 
   addRiskAnalysis: (analysis: Omit<RiskAnalysis, 'id' | 'createdAt' | 'updatedAt'>) => string
   updateRiskAnalysis: (id: string, updates: Partial<RiskAnalysis>) => void
@@ -71,6 +75,7 @@ export const useProjectStore = create<ProjectStore>()(
     (set, get) => ({
       projects: [],
       tasks: [],
+      taskDependencies: [],
       riskAnalyses: [],
       selectedProjectId: null,
       activeView: 'main',
@@ -84,6 +89,7 @@ export const useProjectStore = create<ProjectStore>()(
               ...state,
               projects: (data.projects && data.projects.length > 0) ? data.projects : state.projects,
               tasks: (data.tasks && data.tasks.length > 0) ? data.tasks : state.tasks,
+              taskDependencies: (data.taskDependencies && data.taskDependencies.length > 0) ? data.taskDependencies : state.taskDependencies,
               users: data.users && data.users.length > 0 ? data.users : state.users,
               riskAnalyses: (data.riskAnalyses && data.riskAnalyses.length > 0) ? data.riskAnalyses : state.riskAnalyses
             }))
@@ -345,9 +351,33 @@ export const useProjectStore = create<ProjectStore>()(
         }
         const idsToDelete = deleteRecursively(id)
         set((state) => ({
-          tasks: state.tasks.filter((t) => !idsToDelete.includes(t.id))
+          tasks: state.tasks.filter((t) => !idsToDelete.includes(t.id)),
+          taskDependencies: state.taskDependencies.filter(td => !idsToDelete.includes(td.predecessorId) && !idsToDelete.includes(td.successorId))
         }))
         idsToDelete.forEach(toDelete => backgroundSync(`/api/tasks?id=${toDelete}`, 'DELETE'))
+      },
+
+      addTaskDependency: async (predecessorId, successorId, type = 'finish_to_start') => {
+        const id = generateId()
+        const newDep = { id, predecessorId, successorId, type, createdAt: new Date() }
+        set((state) => ({ taskDependencies: [...state.taskDependencies, newDep] }))
+        const success = await backgroundSync('/api/task-dependencies', 'POST', newDep)
+        if (!success) {
+          set((state) => ({ taskDependencies: state.taskDependencies.filter(d => d.id !== id) }))
+        }
+        return success
+      },
+
+      removeTaskDependency: async (predecessorId, successorId) => {
+        const oldDeps = [...get().taskDependencies]
+        set((state) => ({
+          taskDependencies: state.taskDependencies.filter(d => !(d.predecessorId === predecessorId && d.successorId === successorId))
+        }))
+        const success = await backgroundSync(`/api/task-dependencies?predecessorId=${predecessorId}&successorId=${successorId}`, 'DELETE')
+        if (!success) {
+          set({ taskDependencies: oldDeps })
+        }
+        return success
       },
 
       addRiskAnalysis: (analysisData) => {
@@ -462,6 +492,7 @@ export const useProjectStore = create<ProjectStore>()(
           updatedAt: now,
           deadline: new Date(2028, 11, 31),
           category: 'Frota',
+          status: 'active',
           generalKpis: p1Kpis,
           yearlyGoals: mkGoals(p1Kpis, [2026, 2027, 2028], [0.23, 0, 0]),
           ownerId: '3',
@@ -498,6 +529,7 @@ export const useProjectStore = create<ProjectStore>()(
           updatedAt: now,
           deadline: new Date(2026, 11, 31),
           category: 'Operações',
+          status: 'active',
           generalKpis: p2Kpis,
           yearlyGoals: mkGoals(p2Kpis, [2026], [0.84]),
           ownerId: '3',
@@ -536,6 +568,7 @@ export const useProjectStore = create<ProjectStore>()(
           sprintDuration: 2,
           totalSprints: 12,
           category: 'TI',
+          status: 'active',
           generalKpis: p3Kpis,
           yearlyGoals: mkGoals(p3Kpis, [2026, 2027], [0.22, 0]),
           ownerId: '1',
@@ -572,6 +605,7 @@ export const useProjectStore = create<ProjectStore>()(
           updatedAt: now,
           deadline: new Date(2030, 11, 31),
           category: 'Expansão',
+          status: 'active',
           generalKpis: p4Kpis,
           yearlyGoals: mkGoals(p4Kpis, [2026, 2027, 2028, 2029, 2030], [0.16, 0, 0, 0, 0]),
           ownerId: '3',
@@ -600,6 +634,7 @@ export const useProjectStore = create<ProjectStore>()(
       partialize: (state) => ({
         projects: state.projects,
         tasks: state.tasks,
+        taskDependencies: state.taskDependencies,
         riskAnalyses: state.riskAnalyses,
         selectedProjectId: state.selectedProjectId,
         user: state.user,

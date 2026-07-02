@@ -1,16 +1,14 @@
 import { Project, Task } from './types'
 
 export function exportProjectToCSV(project: Project, tasks: Task[]) {
-  const headers = ['ID', 'Titulo', 'Descricao', 'Status', 'Progresso', 'Prazo', 'ID Pai']
+  const headers = ['Titulo', 'Descricao', 'Status', 'Progresso', 'Prazo']
   
   const rows = tasks.map(task => [
-    task.id,
     task.title,
     task.description || '',
     task.status,
     `${task.progress}%`,
-    task.deadline ? new Date(task.deadline).toLocaleDateString('pt-BR') : '',
-    task.parentId || 'Macro'
+    task.deadline ? new Date(task.deadline).toLocaleDateString('pt-BR') : ''
   ])
 
   const csvContent = [
@@ -77,9 +75,9 @@ export function exportFullProjectToCSV(project: Project, tasks: Task[], riskAnal
   csvContent += `Data de Emissão:;${new Date().toLocaleDateString('pt-BR')}\n\n`
 
   csvContent += `ESTRUTURA DE TAREFAS\n`
-  csvContent += `ID;Titulo;Descricao;Status;Progresso;Prazo;ID Pai\n`
+  csvContent += `Titulo;Descricao;Status;Progresso;Prazo\n`
   tasks.forEach(task => {
-    csvContent += `${task.id};${task.title};${task.description || ''};${task.status};${task.progress}%;${task.deadline ? new Date(task.deadline).toLocaleDateString('pt-BR') : ''};${task.parentId || 'Macro'}\n`
+    csvContent += `${task.title};${task.description || ''};${task.status};${task.progress}%;${task.deadline ? new Date(task.deadline).toLocaleDateString('pt-BR') : ''}\n`
   })
   csvContent += `\n`
 

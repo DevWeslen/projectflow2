@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { METHODOLOGY_INFO, PROJECT_COLORS, type Methodology, type KPI } from '@/lib/types'
+import { LogoPrincesa } from '@/components/logo-princesa'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import {
@@ -112,6 +113,7 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
         methodology,
         color,
         category: category.trim() || 'geral',
+        status: 'active',
         deadline: deadline ? new Date(deadline) : undefined,
         sprintDuration: methodology === 'scrum' ? Number(sprintDuration) : undefined,
         totalSprints: methodology === 'scrum' ? Number(totalSprints) : undefined,
@@ -168,10 +170,15 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
     }}>
       <DialogContent className="w-[95vw] sm:max-w-2xl glass border-none shadow-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl sm:text-2xl font-black text-gradient">Novo Projeto</DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm font-medium text-muted-foreground/80">
-            Crie um projeto com metodologia, prazo, categoria e KPIs para acompanhamento de metas anuais.
-          </DialogDescription>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <DialogTitle className="text-xl sm:text-2xl font-black text-gradient">Novo Projeto</DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm font-medium text-muted-foreground/80">
+                Crie um projeto com ação, prazo, categoria e KPIs para acompanhamento de metas anuais.
+              </DialogDescription>
+            </div>
+            <LogoPrincesa className="h-10 w-24 shrink-0 rounded-none bg-transparent" />
+          </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 mt-2">
@@ -426,7 +433,7 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
 
           {/* Methodology Selection */}
           <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Metodologia Ágil</label>
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Ação</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {(Object.entries(METHODOLOGY_INFO) as [Methodology, typeof METHODOLOGY_INFO[Methodology]][]).map(([key, info]) => (
                 <TooltipProvider key={key} delayDuration={200}>

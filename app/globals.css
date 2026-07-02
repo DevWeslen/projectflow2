@@ -10,29 +10,32 @@
   --card-foreground: #020617;
   --popover: #ffffff;
   --popover-foreground: #020617;
-  --primary: #006838; /* Exact Princesa Green */
+  --primary: #006838;
+  /* Exact Princesa Green */
   --primary-foreground: #ffffff;
   --secondary: #f1f5f9;
   --secondary-foreground: #0f172a;
   --muted: #f8fafc;
   --muted-foreground: #64748b;
-  --accent: #F9A825; /* Exact Princesa Yellow */
+  --accent: #F9A825;
+  /* Exact Princesa Yellow */
   --accent-foreground: #020617;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
   --border: #e2e8f0;
   --input: #e2e8f0;
   --ring: #006838;
-  
+
   --chart-1: #006838;
   --chart-2: #F9A825;
   --chart-3: #f59e0b;
   --chart-4: #3b82f6;
   --chart-5: #10b981;
   --radius: 1rem;
-  
+
   /* Force dark sidebar globally even in light mode, as requested */
-  --sidebar: #020617; /* Very Dark Slate */
+  --sidebar: #020617;
+  /* Very Dark Slate */
   --sidebar-foreground: #f8fafc;
   --sidebar-primary: #006838;
   --sidebar-primary-foreground: #ffffff;
@@ -40,7 +43,7 @@
   --sidebar-accent-foreground: #f8fafc;
   --sidebar-border: #1e293b;
   --sidebar-ring: #006838;
-  
+
   --success: #10b981;
   --success-foreground: #ffffff;
   --warning: #f59e0b;
@@ -67,13 +70,13 @@
   --border: #1e293b;
   --input: #1e293b;
   --ring: #006838;
-  
+
   --chart-1: #006838;
   --chart-2: #F9A825;
   --chart-3: #f59e0b;
   --chart-4: #3b82f6;
   --chart-5: #10b981;
-  
+
   --sidebar: #020617;
   --sidebar-foreground: #f8fafc;
   --sidebar-primary: #006838;
@@ -82,7 +85,7 @@
   --sidebar-accent-foreground: #f8fafc;
   --sidebar-border: #1e293b;
   --sidebar-ring: #006838;
-  
+
   --success: #059669;
   --success-foreground: #ffffff;
   --warning: #d97706;
@@ -90,8 +93,8 @@
 }
 
 @theme inline {
-  --font-sans: 'Geist', 'Geist Fallback';
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-sans: Arial, Helvetica, sans-serif;
+  --font-mono: 'Courier New', Courier, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -134,6 +137,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "ss01", "ss03", "cv01", "cv11";
@@ -144,7 +148,7 @@
   .glass {
     @apply bg-background/60 backdrop-blur-md border border-border/50;
   }
-  
+
   .glass-card {
     @apply bg-card/60 backdrop-blur-xl border border-border/40 shadow-xl;
   }
@@ -167,8 +171,15 @@
   }
 
   @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-10px);
+    }
   }
 
   .animate-in-fade {
@@ -176,41 +187,90 @@
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
 
+/* Hide print-only elements on screen */
+.print-gantt-page {
+  display: none;
+}
+
 @media print {
-  .no-print, 
-  aside, 
-  header, 
-  button,
+  @page {
+    size: A4 landscape;
+    margin: 5mm;
+  }
+
+  /* Completely hide all structural elements we don't want */
+  .no-print,
+  [data-slot="sidebar"],
+  [data-sidebar="sidebar"],
+  [data-sidebar="wrapper"],
+  aside,
+  nav,
   .dropdown-menu,
   [role="tablist"],
-  .view-switcher {
+  .view-switcher,
+  header.border-b {
     display: none !important;
   }
-  
+
+  /* Hide all buttons */
+  button:not([data-print-keep]) {
+    display: none !important;
+  }
+
   .print-only {
     display: block !important;
   }
-  
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html,
   body {
+    width: 100% !important;
     background: white !important;
     color: black !important;
+    font-size: 10px !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
-  
-  .glass, .glass-card {
+
+  .glass,
+  .glass-card {
     background: white !important;
-    border: 1px solid #eee !important;
+    border: 1px solid #ddd !important;
     box-shadow: none !important;
+    backdrop-filter: none !important;
   }
-  
-  main {
+
+  /* Reset the shadcn inset to take up the full screen */
+  main,
+  [data-slot="sidebar-inset"],
+  [class*="SidebarInset"],
+  [class*="sidebar-inset"] {
+    position: static !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    transform: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
   }
 
   .premium-gradient {
@@ -219,5 +279,40 @@
 
   .page-break-before {
     page-break-before: always;
+  }
+
+  /* Gantt chart dedicated print page - shown on print only */
+  .print-gantt-page {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100vw !important;
+    height: 96vh !important;
+    page-break-before: always !important;
+    break-before: page !important;
+    padding: 4px !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+  }
+
+  /* Status report page 1: no extra padding (removes side borders) */
+  .status-report-container {
+    position: static !important;
+    padding: 4mm !important;
+    margin: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    background: white !important;
+    /* Allow page break AFTER this container so Gantt goes to page 2 */
+    page-break-after: always !important;
+    break-after: page !important;
+    overflow: visible !important;
+  }
+
+  .status-report-container h1 {
+    font-size: 24px !important;
+  }
+
+  .status-report-container h2 {
+    font-size: 14px !important;
   }
 }

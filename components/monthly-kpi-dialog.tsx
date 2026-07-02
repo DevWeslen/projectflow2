@@ -1,4 +1,5 @@
-import { Check, X, Calendar, TrendingUp, Save, BarChart3, RefreshCw, AlertTriangle } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Check, X, Calendar, TrendingUp, Save, BarChart3, RefreshCw, AlertTriangle, ArrowDown } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +16,7 @@ export interface EditingMonthly {
   unit: string
   target: number
   aggregation: 'sum' | 'average'
+  distribution?: 'fraction' | 'global'
   monthly: MonthlyData[]
 }
 
@@ -24,12 +26,41 @@ interface MonthlyKpiDialogProps {
   onSave: (data: EditingMonthly) => void
 }
 
+const FormattedNumberInput = ({ value, onChange, className }: { value: number, onChange: (val: number) => void, className?: string }) => {
+  const [localValue, setLocalValue] = useState(value !== undefined ? value.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) : '')
+  const [isFocused, setIsFocused] = useState(false)
+
+  useEffect(() => {
+    if (!isFocused) {
+      setLocalValue(value !== undefined ? value.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) : '')
+    }
+  }, [value, isFocused])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalValue(e.target.value)
+    const clean = e.target.value.replace(/\./g, '').replace(',', '.')
+    const num = Number(clean)
+    if (!isNaN(num)) {
+      onChange(num)
+    }
+  }
+
+  return (
+    <Input
+      type="text"
+      value={localValue}
+      onChange={handleChange}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      className={className}
+    />
+  )
+}
+
 export function MonthlyKpiDialog({ editingMonthly, setEditingMonthly, onSave }: MonthlyKpiDialogProps) {
   if (!editingMonthly) return null
   
-  const handleMonthChange = (monthIndex: number, field: 'current' | 'target', value: string) => {
-    const numValue = Number(value)
-    
+  const handleMonthChange = (monthIndex: number, field: 'current' | 'target', numValue: number) => {
     // Copy the monthly array
     const newMonthly = [...editingMonthly.monthly]
     const month = { ...newMonthly[monthIndex] }
@@ -43,7 +74,8 @@ export function MonthlyKpiDialog({ editingMonthly, setEditingMonthly, onSave }: 
   }
 
   const handleAutoDistribute = () => {
-    const perMonth = editingMonthly.aggregation === 'sum' 
+    const isFraction = true; // Always distribute target evenly across months
+    const perMonth = isFraction 
       ? Math.round((editingMonthly.target / 12) * 100) / 100 
       : editingMonthly.target
 
@@ -51,6 +83,32 @@ export function MonthlyKpiDialog({ editingMonthly, setEditingMonthly, onSave }: 
       ...m,
       target: perMonth
     }))
+
+    setEditingMonthly({
+      ...editingMonthly,
+      monthly: newMonthly
+    })
+  }
+
+  const handleDistributeRemaining = (fromIndex: number) => {
+    let sumSoFar = 0
+    for (let i = 0; i <= fromIndex; i++) {
+      sumSoFar += (editingMonthly.monthly[i].target || 0)
+    }
+
+    const remainingToDistribute = editingMonthly.target - sumSoFar
+    const monthsLeft = 11 - fromIndex
+
+    if (monthsLeft <= 0) return
+
+    const valuePerMonth = Math.round((remainingToDistribute / monthsLeft) * 100) / 100
+
+    const newMonthly = editingMonthly.monthly.map((m, index) => {
+      if (index > fromIndex) {
+        return { ...m, target: valuePerMonth }
+      }
+      return m
+    })
 
     setEditingMonthly({
       ...editingMonthly,
@@ -75,9 +133,7 @@ export function MonthlyKpiDialog({ editingMonthly, setEditingMonthly, onSave }: 
     ? totalCurrent 
     : (validCurrentMonths > 0 ? totalCurrent / validCurrentMonths : 0)
   
-  const finalTarget = editingMonthly.aggregation === 'sum' 
-    ? totalTarget 
-    : (validTargetMonths > 0 ? totalTarget / validTargetMonths : 0)
+  const finalTarget = totalTarget // Always sum the monthly targets to compare against the annual target
 
   const isTargetMismatch = Math.abs(finalTarget - editingMonthly.target) > 0.01
 
@@ -125,13 +181,22 @@ export function MonthlyKpiDialog({ editingMonthly, setEditingMonthly, onSave }: 
                 <span className="col-span-2 text-center text-[#006838]">Realizado</span>
               </div>
               {editingMonthly.monthly.map(m => (
-                <div key={m.monthIndex} className="grid grid-cols-5 gap-2 items-center hover:bg-slate-50 p-1 -mx-1 rounded-lg transition-colors">
+                <div key={m.monthIndex} className="grid grid-cols-5 gap-2 items-center group hover:bg-slate-50 p-1 -mx-1 rounded-lg transition-colors">
                   <span className="col-span-1 font-bold text-slate-600 text-xs text-center">{MONTH_NAMES[m.monthIndex]}</span>
-                  <div className="col-span-2 relative">
-                    <Input type="number" value={m.target || ''} onChange={e => handleMonthChange(m.monthIndex, 'target', e.target.value)} className="h-8 text-xs font-bold text-center pl-1 pr-6" />
+                  <div className="col-span-2 relative flex items-center">
+                    <FormattedNumberInput value={m.target !== undefined ? m.target : 0} onChange={val => handleMonthChange(m.monthIndex, 'target', val)} className="h-8 text-xs font-bold text-center pl-1 pr-6 w-full" />
+                    {m.monthIndex < 11 && (
+                      <button 
+                        onClick={() => handleDistributeRemaining(m.monthIndex)}
+                        className="absolute right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-400 hover:text-[#006838] bg-white rounded-md"
+                        title="Redistribuir saldo restante para os próximos meses"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                   <div className="col-span-2 relative">
-                    <Input type="number" value={m.current || ''} onChange={e => handleMonthChange(m.monthIndex, 'current', e.target.value)} className="h-8 text-xs font-black text-center text-[#006838] border-[#006838]/30 bg-emerald-50/30 pl-1 pr-6" />
+                    <FormattedNumberInput value={m.current !== undefined ? m.current : 0} onChange={val => handleMonthChange(m.monthIndex, 'current', val)} className="h-8 text-xs font-black text-center text-[#006838] border-[#006838]/30 bg-emerald-50/30 pl-1 pr-1 w-full" />
                   </div>
                 </div>
               ))}

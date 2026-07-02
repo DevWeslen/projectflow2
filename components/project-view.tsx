@@ -16,6 +16,7 @@ import { RiskAnalysisView } from './risk-analysis-view'
 import { KpiManagement } from './kpi-management'
 import { ProjectTimeline } from './project-timeline'
 import { UserAvatar, UserAvatarGroup } from './user-avatar'
+import { LogoPrincesa } from './logo-princesa'
 import {
   ArrowLeft,
   Plus,
@@ -36,10 +37,14 @@ import {
   Layers,
   History,
   Users,
-  CheckCircle2
+  CheckCircle2,
+  Loader2
 } from 'lucide-react'
 import { exportProjectToCSV, exportRiskToCSV, exportFullProjectToCSV } from '@/lib/export-utils'
 import { ProjectReport } from './project-report'
+import dynamic from 'next/dynamic'
+const StatusReport = dynamic(() => import('./status-report').then(mod => mod.StatusReport), { ssr: false })
+const StatusReportKpi = dynamic(() => import('./status-report-kpi').then(mod => mod.StatusReportKpi), { ssr: false })
 import { ProjectSettingsDialog } from './project-settings-dialog'
 import {
   DropdownMenu,
@@ -69,6 +74,8 @@ interface ProjectViewProps {
   projectId: string
 }
 
+type ViewMode = 'tree' | 'board' | 'diagram' | 'risk' | 'kpi' | 'timeline' | 'status-report' | 'status-report-kpi'
+
 export function ProjectView({ projectId }: ProjectViewProps) {
   const { projects, tasks, riskAnalyses, calculateProjectProgress, deleteProject, selectProject, user, updateProject } = useProjectStore()
 
@@ -80,9 +87,18 @@ export function ProjectView({ projectId }: ProjectViewProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
+  const [isPrinting, setIsPrinting] = useState(false)
+
+  const handlePrint = () => {
+    setIsPrinting(true)
+    setTimeout(() => {
+      window.print()
+      setIsPrinting(false)
+    }, 100)
+  }
 
   // Default view based on methodology
-  const [view, setView] = useState<'tree' | 'board' | 'diagram' | 'risk' | 'kpi' | 'timeline'>(() => {
+  const [view, setView] = useState<ViewMode>(() => {
     if (!project) return 'tree'
     if (project.methodology === 'kanban' || project.methodology === 'scrum') return 'board'
     if (project.methodology === 'waterfall') return 'diagram'
@@ -123,7 +139,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
   const isOwnerOrAdmin = user?.role === 'admin' || user?.role === 'conselho' || user?.role === 'diretoria' || project.ownerId === user?.id
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden premium-gradient">
+    <div className="flex-1 flex flex-col overflow-hidden print:overflow-visible print:bg-white premium-gradient">
       {/* Header */}
       {!isExpanded && (
         <header className="border-b border-border/50 glass p-4 sm:p-5 relative z-10 animate-in slide-in-from-top duration-500">
@@ -139,6 +155,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
               </Button>
 
               <div className="flex items-center gap-3 overflow-hidden">
+                <LogoPrincesa className="h-10 w-20 shrink-0 rounded-none bg-transparent hidden md:block mr-2" />
                 <div
                   className="h-5 w-5 sm:h-6 sm:w-6 rounded-full shadow-lg shadow-black/20 shrink-0"
                   style={{ backgroundColor: project.color }}
@@ -226,9 +243,13 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                     <Layers className="h-4 w-4 mr-2 text-orange-500" />
                     Relatório Completo (Excel)
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => window.print()}>
+                  <DropdownMenuItem onClick={() => setView('status-report')}>
                     <FileText className="h-4 w-4 mr-2 text-primary" />
-                    Gerar PDF (Visual/Relatório)
+                    Gerar Status Report
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setView('status-report-kpi')}>
+                    <Target className="h-4 w-4 mr-2 text-green-500" />
+                    Gerar Status Report (Indicadores)
                   </DropdownMenuItem>
 
                   <DropdownMenuSeparator />
@@ -268,11 +289,11 @@ export function ProjectView({ projectId }: ProjectViewProps) {
         </header>
       )}
 
-      <div className={cn("flex-1 overflow-auto p-6 scrollbar-hide transition-all duration-500", isExpanded ? "pt-2" : "pt-6")}>
+      <div className={cn("flex-1 overflow-auto print:overflow-visible p-6 print:p-0 scrollbar-hide transition-all duration-500", isExpanded ? "pt-2" : "pt-6")}>
         <div className={cn("max-w-7xl mx-auto space-y-6 animate-in-fade", isExpanded && "space-y-0")}>
           {/* Stats */}
           {!isExpanded && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 animate-in slide-in-from-top duration-500">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 animate-in slide-in-from-top duration-500 print:hidden">
               <Card className="glass-card group hover:border-primary/50 transition-all">
                 <CardContent className="py-6 pt-6">
                   <div className="flex items-center gap-4">
@@ -345,7 +366,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
 
           {/* Progress Bar & View Switcher */}
           {!isExpanded && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top duration-700">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top duration-700 print:hidden">
               <Card className="glass-card overflow-hidden">
                 <CardContent className="p-6">
                   <div className="space-y-4">
@@ -445,14 +466,16 @@ export function ProjectView({ projectId }: ProjectViewProps) {
             ) : view === 'kpi' ? (
               <KpiManagement projectId={projectId} />
             ) : (
-              <Card className={cn("glass-card border-none shadow-xl transition-all duration-500", isExpanded && "shadow-2xl ring-1 ring-white/10")}>
-                <CardHeader className="pb-4 border-b border-white/5">
+              <Card className={cn("glass-card border-none shadow-xl transition-all duration-500 print:shadow-none print:border-none print:overflow-visible print:block", isExpanded && "shadow-2xl ring-1 ring-white/10")}>
+                <CardHeader className="pb-4 border-b border-white/5 print:hidden">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg font-bold flex items-center gap-2">
                       {view === 'tree' && <><ListTree className="h-5 w-5 text-primary" /> Estrutura do Projeto</>}
                       {view === 'board' && <><LayoutDashboard className="h-5 w-5 text-primary" /> Kanban Board</>}
                       {view === 'diagram' && <><Network className="h-5 w-5 text-primary" /> Fluxo do Projeto</>}
                       {view === 'timeline' && <><History className="h-5 w-5 text-primary" /> Cronograma Real</>}
+                      {view === 'status-report' && <><FileText className="h-5 w-5 text-primary" /> Status Report Avançado</>}
+                      {view === 'status-report-kpi' && <><Target className="h-5 w-5 text-green-500" /> Status Report de Indicadores</>}
                     </CardTitle>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-[10px] font-black tracking-tighter uppercase px-2 py-0">
@@ -473,7 +496,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent className="p-0 print:overflow-visible print:block">
                   {view === 'tree' && (
                     <div className="p-4 sm:p-6">
                       <TaskTree
@@ -497,6 +520,20 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                   )}
                   {view === 'timeline' && (
                     <ProjectTimeline projectId={projectId} />
+                  )}
+                  {view === 'status-report' && (
+                    <div className="relative">
+                      <div id="status-report-content">
+                        <StatusReport projectId={projectId} />
+                      </div>
+                    </div>
+                  )}
+                  {view === 'status-report-kpi' && (
+                    <div className="relative">
+                      <div id="status-report-kpi-content">
+                        <StatusReportKpi projectId={projectId} />
+                      </div>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -537,8 +574,10 @@ export function ProjectView({ projectId }: ProjectViewProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Report View (Print Only) */}
-      <ProjectReport projectId={projectId} />
+      {/* Old Report View (Print Only) - Retained for compatibility if needed */}
+      <div className="hidden print:hidden">
+        <ProjectReport projectId={projectId} />
+      </div>
 
       {/* Settings Dialog */}
       <ProjectSettingsDialog 
