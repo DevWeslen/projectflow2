@@ -54,6 +54,7 @@ model Task {
   ownerId     String?
   stakeholderIds String? // JSON array of strings
   externalStakeholderNames String?
+  externalOwnerName String?
   attachments String?   // JSON array of attachment objects
   title       String
   description String?

@@ -465,7 +465,8 @@ export const useProjectStore = create<ProjectStore>()(
           generalKpis: p1Kpis,
           yearlyGoals: mkGoals(p1Kpis, [2026, 2027, 2028], [0.23, 0, 0]),
           ownerId: '3',
-          memberIds: ['1', '2', '3']
+          memberIds: ['1', '2', '3'],
+          status: 'active'
         }
         const p1Tasks: Task[] = []
         const p1t1 = gid(), p1t2 = gid(), p1t3 = gid()
@@ -500,7 +501,8 @@ export const useProjectStore = create<ProjectStore>()(
           generalKpis: p2Kpis,
           yearlyGoals: mkGoals(p2Kpis, [2026], [0.84]),
           ownerId: '3',
-          memberIds: ['1', '2', '3']
+          memberIds: ['1', '2', '3'],
+          status: 'active'
         }
         const p2Tasks: Task[] = []
         const p2t1 = gid(), p2t2 = gid()
@@ -537,7 +539,8 @@ export const useProjectStore = create<ProjectStore>()(
           generalKpis: p3Kpis,
           yearlyGoals: mkGoals(p3Kpis, [2026, 2027], [0.22, 0]),
           ownerId: '1',
-          memberIds: ['1', '2']
+          memberIds: ['1', '2'],
+          status: 'active'
         }
         const p3Tasks: Task[] = []
         const p3t1 = gid(), p3t2 = gid(), p3t3 = gid()
@@ -572,7 +575,8 @@ export const useProjectStore = create<ProjectStore>()(
           generalKpis: p4Kpis,
           yearlyGoals: mkGoals(p4Kpis, [2026, 2027, 2028, 2029, 2030], [0.16, 0, 0, 0, 0]),
           ownerId: '3',
-          memberIds: ['1', '2', '3']
+          memberIds: ['1', '2', '3'],
+          status: 'active'
         }
         const p4Tasks: Task[] = []
         const p4t1 = gid(), p4t2 = gid()

@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { KPI, Project } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { LogoPrincesa } from '@/components/logo-princesa'
+import { Notifications } from '@/components/notifications'
 import {
   Select,
   SelectContent,
@@ -230,6 +231,7 @@ export function ConsolidatedDashboard() {
             <span className="text-xs font-semibold text-zinc-900 tracking-tight">{user?.name}</span>
             <span className="text-[9px] text-zinc-400 uppercase tracking-widest font-bold">{user?.role}</span>
           </div>
+          <Notifications />
           <Button variant="ghost" size="sm" className="h-8 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg px-2 sm:px-3 text-xs font-semibold shrink-0" onClick={() => logout()}>
             Sair
           </Button>

@@ -5,6 +5,7 @@ import { useProjectStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { LogoPrincesa } from '@/components/logo-princesa'
+import { Notifications } from '@/components/notifications'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -153,22 +154,23 @@ export function AppSidebar({ onNewProject }: AppSidebarProps) {
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-sidebar-border bg-sidebar">
-        <div className="flex items-center gap-3 p-2 bg-sidebar-accent/50 rounded-xl border border-sidebar-border mb-4">
-          <Avatar className="h-8 w-8 border-2 border-sidebar-border shadow-sm">
+        <div className="flex items-center gap-2 p-2 bg-sidebar-accent/50 rounded-xl border border-sidebar-border mb-4">
+          <Avatar className="h-8 w-8 border-2 border-sidebar-border shadow-sm shrink-0">
             <AvatarFallback className="bg-primary text-primary-foreground text-[10px] font-bold">
               {user?.name.substring(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <div className="flex flex-col min-w-0">
+          <div className="flex flex-col min-w-0 flex-1">
             <span className="text-[11px] font-bold text-sidebar-foreground truncate uppercase tracking-tighter">{user?.name}</span>
             <Badge variant="outline" className="w-fit text-[8px] h-3 uppercase font-black px-1 border-primary/30 text-primary bg-primary/10">
               {user?.role}
             </Badge>
           </div>
+          <Notifications />
           <Button
             variant="ghost"
             size="icon"
-            className="ml-auto h-7 w-7 rounded-full hover:bg-destructive/10 hover:text-destructive"
+            className="h-7 w-7 rounded-full hover:bg-destructive/10 hover:text-destructive shrink-0"
             onClick={logout}
           >
             <Power className="h-3.5 w-3.5" />

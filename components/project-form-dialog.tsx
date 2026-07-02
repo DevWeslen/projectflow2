@@ -120,7 +120,8 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
         ownerId: currentUser?.id || 'system',
         memberIds: [currentUser?.id || 'system', ...memberIds],
         stakeholderIds: stakeholderIds,
-        attachments: attachments
+        attachments: attachments,
+        status: 'active'
       })
 
       if (id) {

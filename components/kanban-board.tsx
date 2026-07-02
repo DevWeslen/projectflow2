@@ -41,6 +41,144 @@ interface KanbanCardProps {
   onViewDetails: (task: Task) => void
 }
 
+
+function KanbanSubtaskNode({ 
+  task, 
+  level = 1, 
+  onEdit, 
+  onAddSubtask, 
+  onCompleteWithAttachment, 
+  onViewDetails 
+}: KanbanCardProps & { level?: number }) {
+  const { getChildTasks, updateTask, deleteTask } = useProjectStore()
+  const [isExpanded, setIsExpanded] = useState(false)
+  const children = getChildTasks(task.id)
+  const isDone = task.status === 'done'
+
+  const handleToggleDone = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (isDone) {
+      updateTask(task.id, { status: 'todo', progress: 0 })
+    } else {
+      onCompleteWithAttachment(task, { status: 'done', progress: 100 })
+    }
+  }
+
+  return (
+    <div className="group/sub space-y-1.5 animate-in-fade" style={{ marginLeft: level > 1 ? '12px' : '0' }}>
+      <div 
+        className={cn(
+          "flex items-start justify-between gap-2 p-1.5 rounded-lg transition-colors hover:bg-secondary/30",
+          level > 1 && "border-l-2 border-primary/20 pl-2"
+        )}
+      >
+        <div 
+          className="flex items-start gap-2 flex-1 min-w-0 cursor-pointer" 
+          onClick={(e) => {
+            e.stopPropagation()
+            if (children.length > 0) {
+              setIsExpanded(!isExpanded)
+            } else {
+              onViewDetails(task)
+            }
+          }}
+        >
+          <button
+            onClick={handleToggleDone}
+            className={cn(
+              "mt-0.5 h-4 w-4 flex items-center justify-center rounded-full transition-all shrink-0",
+              isDone ? "text-green-500 hover:text-green-400" : "text-muted-foreground/30 hover:text-primary"
+            )}
+            title={isDone ? 'Desmarcar conclusão' : 'Marcar como concluído'}
+          >
+            {isDone ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
+          </button>
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className={cn(
+              "text-[11px] font-bold text-foreground/80 leading-tight",
+              isDone && "line-through opacity-60"
+            )}>
+              {task.title}
+            </span>
+            {task.description && (
+              <span className="text-[9px] text-muted-foreground/60 truncate mt-0.5">
+                {task.description}
+              </span>
+            )}
+          </div>
+        </div>
+        
+        <div className="flex flex-col items-end gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-1 opacity-0 group-hover/sub:opacity-100 transition-opacity">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-5 w-5 rounded-md">
+                  <MoreHorizontal className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="glass">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(task); }}>
+                  <Edit2 className="h-3 w-3 mr-2" />
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onAddSubtask(task.id); }}>
+                  <Plus className="h-3 w-3 mr-2" />
+                  Add Subtarefa
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive"
+                  onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
+                >
+                  <Trash2 className="h-3 w-3 mr-2" />
+                  Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] font-black text-primary">{task.progress}%</span>
+            {children.length > 0 && (
+              <span className={cn(
+                "flex items-center text-[9px] font-bold transition-colors cursor-pointer",
+                isExpanded ? "text-primary" : "text-muted-foreground/50 hover:text-primary"
+              )}
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsExpanded(!isExpanded)
+              }}
+              >
+                {children.length} {children.length === 1 ? 'micro' : 'micros'}
+                <ChevronRight className={cn("h-3 w-3 ml-0.5 transition-transform", isExpanded && "rotate-90")} />
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {!isDone && task.progress > 0 && (
+        <Progress value={task.progress} className="h-0.5 rounded-full bg-secondary/50 mx-1.5" />
+      )}
+
+      {isExpanded && children.length > 0 && (
+        <div className="pt-1 space-y-1">
+          {children.map(child => (
+            <KanbanSubtaskNode 
+              key={child.id} 
+              task={child} 
+              level={level + 1} 
+              onEdit={onEdit}
+              onAddSubtask={onAddSubtask}
+              onCompleteWithAttachment={onCompleteWithAttachment}
+              onViewDetails={onViewDetails}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment, onViewDetails }: KanbanCardProps) {
   const { calculateTaskProgress, deleteTask, getChildTasks, updateTask, users } = useProjectStore()
   const [isExpanded, setIsExpanded] = useState(false)
@@ -48,7 +186,8 @@ function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment, onVi
   const children = getChildTasks(task.id)
   const isDone = task.status === 'done'
 
-  const handleToggleDone = () => {
+  const handleToggleDone = (e: React.MouseEvent) => {
+    e.stopPropagation()
     if (isDone) {
       updateTask(task.id, { status: 'todo', progress: 0 })
     } else {
@@ -101,18 +240,18 @@ function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment, onVi
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="glass">
-              <DropdownMenuItem onClick={() => onEdit(task)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(task); }}>
                 <Edit2 className="h-3.5 w-3.5 mr-2" />
                 Editar
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onAddSubtask(task.id)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onAddSubtask(task.id); }}>
                 <Plus className="h-3.5 w-3.5 mr-2" />
                 Add Subtarefa
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 className="text-destructive focus:text-destructive"
-                onClick={() => deleteTask(task.id)}
+                onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
               >
                 <Trash2 className="h-3.5 w-3.5 mr-2" />
                 Excluir
@@ -147,7 +286,10 @@ function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment, onVi
             </div>
             {children.length > 0 && (
               <button 
-                onClick={() => setIsExpanded(!isExpanded)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsExpanded(!isExpanded)
+                }}
                 className="flex items-center gap-1 hover:text-primary transition-colors bg-secondary/30 px-1.5 py-0.5 rounded-full"
               >
                 <span>{children.length} Micros</span>
@@ -208,55 +350,20 @@ function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment, onVi
 
         {/* Subtasks (Micros) Area */}
         {isExpanded && children.length > 0 && (
-          <div className="pt-3 border-t border-border/20 space-y-3 animate-in-fade">
-             {children.map(child => {
-               const childDone = child.status === 'done'
-               return (
-                <div key={child.id} className="group/sub space-y-1.5">
-                   <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <button
-                          onClick={() => {
-                            if (childDone) {
-                              updateTask(child.id, { status: 'todo', progress: 0 })
-                            } else {
-                              updateTask(child.id, { status: 'done', progress: 100 })
-                            }
-                          }}
-                          className={cn(
-                            "h-4 w-4 flex items-center justify-center rounded-full transition-all shrink-0",
-                            childDone ? "text-green-500 hover:text-green-400" : "text-muted-foreground/30 hover:text-primary"
-                          )}
-                          title={childDone ? 'Desmarcar conclusão' : 'Marcar como concluído'}
-                        >
-                          {childDone ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
-                        </button>
-                        <div className="flex flex-col min-w-0">
-                          <span className={cn(
-                            "text-[11px] font-bold text-foreground/80 truncate",
-                            childDone && "line-through opacity-60"
-                          )}>{child.title}</span>
-                          {child.description && (
-                            <span className="text-[9px] text-muted-foreground/60 truncate">{child.description}</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <span className="text-[10px] font-black text-primary">{child.progress}%</span>
-                        {child.deadline && (
-                          <span className="text-[8px] font-bold text-muted-foreground/50 flex items-center gap-0.5">
-                            <CalendarDays className="h-2 w-2" />
-                            {new Date(child.deadline).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                          </span>
-                        )}
-                      </div>
-                   </div>
-                   <Progress value={child.progress} className="h-0.5 rounded-full bg-secondary/50" />
-                </div>
-               )
-             })}
+          <div className="pt-3 border-t border-border/20 space-y-2 animate-in-fade" onClick={(e) => e.stopPropagation()}>
+             {children.map(child => (
+               <KanbanSubtaskNode 
+                 key={child.id} 
+                 task={child} 
+                 onEdit={onEdit}
+                 onAddSubtask={onAddSubtask}
+                 onCompleteWithAttachment={onCompleteWithAttachment}
+                 onViewDetails={onViewDetails}
+               />
+             ))}
           </div>
         )}
+
       </CardContent>
     </Card>
   )
@@ -297,10 +404,7 @@ export function KanbanBoard({ projectId, onAddTask, onEditTask }: KanbanBoardPro
     }
   }
   
-  // No Kanban, geralmente mostramos as tarefas de nível superior, 
-  // ou todas se quisermos uma visão plana. Para o usuário ver "Macros", 
-  // mostramos as root tasks.
-  const rootTasks = allTasks.filter(t => t.parentId === null)
+  const displayTasks = allTasks.filter(t => t.parentId === null)
 
   const columns: { status: TaskStatus; title: string; color: string }[] = [
     { status: 'todo', title: 'A Fazer', color: 'bg-muted/50' },
@@ -312,7 +416,7 @@ export function KanbanBoard({ projectId, onAddTask, onEditTask }: KanbanBoardPro
   return (
     <div className="flex gap-4 sm:gap-6 h-full overflow-x-auto pb-6 scrollbar-hide touch-pan-x">
       {columns.map((col) => {
-        const tasksInCol = rootTasks.filter(t => t.status === col.status)
+        const tasksInCol = displayTasks.filter(t => t.status === col.status)
         
         return (
           <div key={col.status} className="flex-1 min-w-[260px] xs:min-w-[280px] max-w-[350px] flex flex-col h-full">
