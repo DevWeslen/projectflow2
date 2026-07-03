@@ -156,7 +156,7 @@ export function UserManagement() {
         <DialogContent className="sm:max-w-[450px] glass border-none shadow-2xl p-0 overflow-hidden">
           <div className="p-6 pb-2">
             <DialogHeader>
-              <DialogTitle className="text-2xl font-black text-gradient uppercase italic">
+              <DialogTitle className="text-2xl font-black text-primary uppercase italic">
                 {editingUser ? 'Editar Usuário' : 'Novo Usuário'}
               </DialogTitle>
               <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest mt-1">Configure o perfil e acesso</p>

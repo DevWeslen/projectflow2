@@ -232,7 +232,7 @@ function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment, onVi
                 {task.description}
               </p>
             )}
-            {hasDelayedPredecessor && (
+            {false && (
               <div className="flex items-center gap-1 mt-1 text-[9px] font-bold text-red-500 bg-red-500/10 w-fit px-1.5 py-0.5 rounded-sm">
                 <AlertCircle className="h-3 w-3" />
                 <span>Risco: Bloqueada</span>

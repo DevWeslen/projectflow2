@@ -93,3 +93,14 @@ model RiskAnalysis {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model ProjectMessage {
+  id          String   @id @default(cuid())
+  projectId   String
+  userId      String
+  userName    String
+  content     String
+  attachments String?
+  createdAt   DateTime @default(now())
+}
+

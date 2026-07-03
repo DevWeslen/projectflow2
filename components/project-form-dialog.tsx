@@ -122,8 +122,7 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
         ownerId: currentUser?.id || 'system',
         memberIds: [currentUser?.id || 'system', ...memberIds],
         stakeholderIds: stakeholderIds,
-        attachments: attachments,
-        status: 'active'
+        attachments: attachments
       })
 
       if (id) {
@@ -172,7 +171,7 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <DialogTitle className="text-xl sm:text-2xl font-black text-gradient">Novo Projeto</DialogTitle>
+              <DialogTitle className="text-xl sm:text-2xl font-black text-primary">Novo Projeto</DialogTitle>
               <DialogDescription className="text-xs sm:text-sm font-medium text-muted-foreground/80">
                 Crie um projeto com ação, prazo, categoria e KPIs para acompanhamento de metas anuais.
               </DialogDescription>

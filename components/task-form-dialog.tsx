@@ -308,7 +308,7 @@ export function TaskFormDialog({
       <DialogContent className="sm:max-w-lg glass border-none shadow-2xl p-0 overflow-hidden">
         <div className="p-6 pb-2">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black text-gradient">
+            <DialogTitle className="text-2xl font-black text-primary">
               {editTask ? 'Editar Tarefa' : parentId ? 'Nova Subtarefa' : 'Nova Tarefa Macro'}
             </DialogTitle>
             <DialogDescription className="font-medium text-muted-foreground/80">

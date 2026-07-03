@@ -162,7 +162,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                 />
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight text-gradient truncate">
+                    <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight text-primary truncate">
                       {project.name}
                     </h1>
                     {project.status === 'completed' && (

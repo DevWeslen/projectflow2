@@ -89,7 +89,7 @@ export function AttachmentPromptDialog({
           <div className="mx-auto w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mb-2">
             <CheckCircle2 className="h-6 w-6 text-green-500" />
           </div>
-          <DialogTitle className="text-center text-xl font-black text-gradient">
+          <DialogTitle className="text-center text-xl font-black text-primary">
             Tarefa Concluída!
           </DialogTitle>
           <DialogDescription className="text-center font-medium">

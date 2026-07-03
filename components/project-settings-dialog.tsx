@@ -62,7 +62,7 @@ export function ProjectSettingsDialog({ project, open, onOpenChange }: ProjectSe
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md glass border-none shadow-2xl p-6">
         <DialogHeader>
-          <DialogTitle className="text-xl font-black text-gradient flex items-center gap-2">
+          <DialogTitle className="text-xl font-black text-primary flex items-center gap-2">
             Configurações do Projeto
           </DialogTitle>
           <DialogDescription className="text-xs font-medium text-muted-foreground/80 lowercase">

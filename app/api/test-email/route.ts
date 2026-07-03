@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   });
 
   if (result.success) {
-    return NextResponse.json({ message: "E-mail enviado com sucesso!", info: result.info });
+    return NextResponse.json({ message: "E-mail enviado com sucesso!", info: result.results });
   } else {
     return NextResponse.json({ message: "Falha ao enviar e-mail.", error: result.error }, { status: 500 });
   }

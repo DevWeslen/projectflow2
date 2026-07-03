@@ -153,10 +153,8 @@ export function StatusReport({ projectId }: StatusReportProps) {
         <div style={{ fontSize: 26, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1.1 }}>{title}</div>
         <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', opacity: 0.85, marginTop: 2 }}>Projeto {project.name}</div>
       </div>
-      <div style={{ background: 'white', borderRadius: 8, padding: '6px 12px', minWidth: 110, textAlign: 'center' }}>
-        <span style={{ color: '#006838', fontWeight: 900, textTransform: 'uppercase', fontSize: 13, lineHeight: 1.2, display: 'block' }}>
-          Princesa<br />Dos Campos
-        </span>
+      <div style={{ background: 'white', borderRadius: 8, padding: '6px 12px', minWidth: 110, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <img src="/cropped-icon.png" alt="Princesa dos Campos" style={{ height: 52, width: 'auto', objectFit: 'contain', display: 'block' }} />
       </div>
     </div>
   )
@@ -186,8 +184,8 @@ export function StatusReport({ projectId }: StatusReportProps) {
             <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">Status Report</h1>
             <h2 className="text-sm sm:text-md font-bold text-green-100 uppercase mt-0.5" title={project.name}>Projeto {project.name}</h2>
           </div>
-          <div className="bg-white rounded-lg px-4 py-2 min-w-[120px] text-center">
-            <span className="text-[#006838] font-black uppercase text-sm leading-none tracking-tighter block">Princesa<br />Dos Campos</span>
+          <div className="bg-white rounded-lg px-4 py-2 min-w-[120px] flex items-center justify-center">
+            <img src="/cropped-icon.png" alt="Princesa dos Campos" className="h-12 w-auto object-contain" />
           </div>
         </div>
 

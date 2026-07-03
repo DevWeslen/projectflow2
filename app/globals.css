@@ -157,9 +157,6 @@
     @apply bg-linear-to-br from-primary/20 via-background to-accent/10;
   }
 
-  .text-gradient {
-    @apply bg-linear-to-r from-primary to-accent bg-clip-text text-transparent;
-  }
 
   .bg-dot-grid {
     background-image: radial-gradient(var(--border) 1px, transparent 1px);

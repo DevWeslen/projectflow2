@@ -16,7 +16,7 @@ export function ProjectChat({ projectId }: ProjectChatProps) {
   const [content, setContent] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const messages = projectMessages.filter(m => m.projectId === projectId).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  const messages = projectMessages.filter((m: any) => m.projectId === projectId).sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -71,7 +71,7 @@ export function ProjectChat({ projectId }: ProjectChatProps) {
             <p className="text-xs text-muted-foreground">Seja o primeiro a mandar um "Olá"!</p>
           </div>
         ) : (
-          messages.map((msg, idx) => {
+          messages.map((msg: any, idx: number) => {
             const isMe = msg.userId === user?.id
             const showAvatar = idx === 0 || messages[idx - 1].userId !== msg.userId
 

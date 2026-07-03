@@ -76,7 +76,7 @@ export function RiskAnalysisDialog({ projectId, open, onOpenChange }: RiskAnalys
             <div className="p-2 rounded-xl bg-orange-500/20 text-orange-500">
               <ShieldAlert className="h-6 w-6" />
             </div>
-            <DialogTitle className="text-2xl font-black text-gradient">Nova Análise de Risco</DialogTitle>
+            <DialogTitle className="text-2xl font-black text-primary">Nova Análise de Risco</DialogTitle>
           </div>
           <DialogDescription className="font-medium text-muted-foreground/80">
             Escolha uma ferramenta para identificar e gerenciar os riscos do seu projeto.

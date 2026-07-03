@@ -73,7 +73,7 @@ export function RiskAnalysisView({ projectId, isExpanded, onToggleExpand }: Risk
             <div>
               <div className="flex items-center gap-2">
                  <span className="text-xl">{info.icon}</span>
-                 <h2 className="text-2xl font-black text-gradient">{selectedAnalysis.title}</h2>
+                 <h2 className="text-2xl font-black text-primary">{selectedAnalysis.title}</h2>
               </div>
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{info.name} • {info.description}</p>
             </div>
@@ -134,7 +134,7 @@ export function RiskAnalysisView({ projectId, isExpanded, onToggleExpand }: Risk
   return (
     <div className="space-y-6 animate-in-fade">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-black text-gradient">Análises de Risco</h2>
+        <h2 className="text-2xl font-black text-primary">Análises de Risco</h2>
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
