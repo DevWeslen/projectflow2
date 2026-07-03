@@ -20,7 +20,8 @@ import {
   Zap,
   Users,
   Paperclip,
-  AlertCircle
+  AlertCircle,
+  Link as LinkIcon
 } from 'lucide-react'
 import { UserAvatar } from './user-avatar'
 import { AttachmentPromptDialog } from './attachment-prompt-dialog'
@@ -51,10 +52,13 @@ function KanbanSubtaskNode({
   onCompleteWithAttachment,
   onViewDetails
 }: KanbanCardProps & { level?: number }) {
-  const { getChildTasks, updateTask, deleteTask } = useProjectStore()
+  const { getChildTasks, updateTask, deleteTask, taskDependencies } = useProjectStore()
   const [isExpanded, setIsExpanded] = useState(false)
   const children = getChildTasks(task.id)
   const isDone = task.status === 'done'
+
+  const waitingOnCount = taskDependencies.filter(d => d.successorId === task.id).length
+  const blocksCount = taskDependencies.filter(d => d.predecessorId === task.id).length
 
   const handleToggleDone = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -77,11 +81,7 @@ function KanbanSubtaskNode({
           className="flex items-start gap-2 flex-1 min-w-0 cursor-pointer"
           onClick={(e) => {
             e.stopPropagation()
-            if (children.length > 0) {
-              setIsExpanded(!isExpanded)
-            } else {
-              onViewDetails(task)
-            }
+            onViewDetails(task)
           }}
         >
           <button
@@ -105,6 +105,23 @@ function KanbanSubtaskNode({
               <span className="text-[9px] text-muted-foreground/60 truncate mt-0.5">
                 {task.description}
               </span>
+            )}
+            
+            {(waitingOnCount > 0 || blocksCount > 0) && (
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {waitingOnCount > 0 && (
+                  <div className="flex items-center gap-0.5 text-[8px] font-bold text-orange-500 bg-orange-500/10 w-fit px-1 py-0.5 rounded-sm" title={`Depende de ${waitingOnCount} tarefa(s)`}>
+                    <AlertCircle className="h-2.5 w-2.5" />
+                    <span>Espera: {waitingOnCount}</span>
+                  </div>
+                )}
+                {blocksCount > 0 && (
+                  <div className="flex items-center gap-0.5 text-[8px] font-bold text-blue-500 bg-blue-500/10 w-fit px-1 py-0.5 rounded-sm" title={`Bloqueia ${blocksCount} tarefa(s)`}>
+                    <LinkIcon className="h-2.5 w-2.5" />
+                    <span>Bloqueia: {blocksCount}</span>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -187,7 +204,11 @@ function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment, onVi
   const children = getChildTasks(task.id)
   const isDone = task.status === 'done'
 
-  const handleToggleDone = () => {
+  const waitingOnCount = taskDependencies.filter(d => d.successorId === task.id).length
+  const blocksCount = taskDependencies.filter(d => d.predecessorId === task.id).length
+
+  const handleToggleDone = (e: React.MouseEvent) => {
+    e.stopPropagation()
     if (isDone) {
       updateTask(task.id, { status: 'todo', progress: 0 })
     } else {
@@ -215,12 +236,7 @@ function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment, onVi
             {isDone ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
           </button>
 
-          <div className="flex-1 min-w-0" onClick={(e) => {
-            if (children.length > 0) {
-              e.stopPropagation()
-              setIsExpanded(!isExpanded)
-            }
-          }} style={{ cursor: children.length > 0 ? 'pointer' : 'default' }}>
+          <div className="flex-1 min-w-0">
             <h4 className={cn(
               "font-bold text-sm text-foreground leading-snug line-clamp-2 transition-colors group-hover:text-primary",
               isDone && "line-through opacity-60"
@@ -232,10 +248,21 @@ function KanbanCard({ task, onEdit, onAddSubtask, onCompleteWithAttachment, onVi
                 {task.description}
               </p>
             )}
-            {false && (
-              <div className="flex items-center gap-1 mt-1 text-[9px] font-bold text-red-500 bg-red-500/10 w-fit px-1.5 py-0.5 rounded-sm">
-                <AlertCircle className="h-3 w-3" />
-                <span>Risco: Bloqueada</span>
+            
+            {(waitingOnCount > 0 || blocksCount > 0) && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {waitingOnCount > 0 && (
+                  <div className="flex items-center gap-1 text-[9px] font-bold text-orange-500 bg-orange-500/10 w-fit px-1.5 py-0.5 rounded-sm" title={`Depende de ${waitingOnCount} tarefa(s)`}>
+                    <AlertCircle className="h-3 w-3" />
+                    <span>Espera: {waitingOnCount}</span>
+                  </div>
+                )}
+                {blocksCount > 0 && (
+                  <div className="flex items-center gap-1 text-[9px] font-bold text-blue-500 bg-blue-500/10 w-fit px-1.5 py-0.5 rounded-sm" title={`Bloqueia ${blocksCount} tarefa(s)`}>
+                    <LinkIcon className="h-3 w-3" />
+                    <span>Bloqueia: {blocksCount}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>

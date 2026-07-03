@@ -73,10 +73,10 @@ export function TaskDependenciesManager({ taskId, projectId }: TaskDependenciesM
       <div className="bg-secondary/10 rounded-2xl p-4 border border-border/10 space-y-4">
         
         {/* Adicionar Dependência */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <Select value={selectedTaskId} onValueChange={setSelectedTaskId}>
-            <SelectTrigger className="flex-1 bg-background text-xs font-bold h-9">
-              <SelectValue placeholder="Selecione uma tarefa para vincular como dependência..." />
+            <SelectTrigger className="flex-1 min-w-0 bg-background text-xs font-bold h-9">
+              <div className="truncate text-left w-[90%]"><SelectValue placeholder="Selecione uma tarefa para vincular..." /></div>
             </SelectTrigger>
             <SelectContent>
               {availableTasks.map(t => (

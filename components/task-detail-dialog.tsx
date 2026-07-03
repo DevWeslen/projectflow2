@@ -48,8 +48,8 @@ export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:max-w-[600px] md:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col glass border-none shadow-2xl p-0">
-        <DialogHeader className="p-4 sm:p-6 pb-2">
+      <DialogContent className="w-[95vw] sm:max-w-[550px] md:max-w-[650px] max-h-[90vh] overflow-hidden flex flex-col glass border-none shadow-2xl p-0">
+        <DialogHeader className="p-4 sm:p-5 pb-2">
           <div className="flex items-center justify-between gap-4 mb-2">
             <Badge className={cn("text-[10px] font-black uppercase px-2.5 py-0.5", statusInfo.color)}>
               {statusInfo.name}
@@ -58,13 +58,13 @@ export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogP
               ID: {task.id.substring(0, 8)}
             </div>
           </div>
-          <DialogTitle className="text-2xl font-black tracking-tight text-foreground leading-tight">
+          <DialogTitle className="text-xl sm:text-2xl font-black tracking-tight text-foreground leading-tight">
             {task.title}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 pt-2">
-          <div className="space-y-6 sm:space-y-8">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 pt-2">
+          <div className="space-y-4 sm:space-y-5">
             {/* Progress Section */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -83,14 +83,14 @@ export function TaskDetailDialog({ task, open, onOpenChange }: TaskDetailDialogP
                 <FileText className="h-4 w-4" />
                 Descrição
               </div>
-              <div className="bg-secondary/20 rounded-2xl p-4 border border-border/10">
-                <p className="text-sm leading-relaxed text-foreground/80 whitespace-pre-wrap">
+              <div className="bg-secondary/10 rounded-xl p-3 border border-border/10">
+                <p className="text-sm leading-snug text-foreground/80 whitespace-pre-wrap">
                   {task.description || 'Nenhuma descrição fornecida.'}
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Ownership */}
               <div className="space-y-4">
                 <div className="space-y-3">
