@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { GanttChart } from './gantt-chart'
 import { Maximize2, Minimize2, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { DateRange } from 'react-day-picker'
 
 interface StatusReportProps {
   projectId: string
@@ -14,6 +15,8 @@ export function StatusReport({ projectId }: StatusReportProps) {
   const { projects, tasks, taskDependencies, riskAnalyses, users } = useProjectStore()
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isExportingPDF, setIsExportingPDF] = useState(false)
+  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('day')
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
 
   // Refs for jsPDF capture
   const page1Ref = useRef<HTMLDivElement>(null)
@@ -21,6 +24,18 @@ export function StatusReport({ projectId }: StatusReportProps) {
 
   const project = projects.find(p => p.id === projectId)
   const projectTasks = tasks.filter(t => t.projectId === projectId)
+
+  useEffect(() => {
+    if (project) {
+      const start = new Date(project.actualStartDate || project.createdAt)
+      const end = project.deadline ? new Date(project.deadline) : undefined
+      const ganttEnd = end || new Date(new Date().getTime() + 90 * 24 * 60 * 60 * 1000)
+      setDateRange({
+        from: new Date(start.getFullYear(), start.getMonth(), 1),
+        to: new Date(ganttEnd.getFullYear(), ganttEnd.getMonth() + 1, 0)
+      })
+    }
+  }, [projectId, project])
 
   if (!project) return null
 
@@ -281,7 +296,16 @@ export function StatusReport({ projectId }: StatusReportProps) {
             </Button>
           </div>
           <div className="overflow-x-auto p-3 bg-white">
-            <GanttChart tasks={projectTasks} dependencies={taskDependencies} startDate={start} endDate={ganttEnd} />
+            <GanttChart
+              tasks={projectTasks}
+              dependencies={taskDependencies}
+              startDate={start}
+              endDate={ganttEnd}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+            />
           </div>
         </div>
 
@@ -299,7 +323,16 @@ export function StatusReport({ projectId }: StatusReportProps) {
               </Button>
             </div>
             <div className="flex-1 min-h-0 overflow-x-auto">
-              <GanttChart tasks={projectTasks} dependencies={taskDependencies} startDate={start} endDate={ganttEnd} />
+              <GanttChart
+                tasks={projectTasks}
+                dependencies={taskDependencies}
+                startDate={start}
+                endDate={ganttEnd}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+              />
             </div>
           </div>
         </div>
@@ -397,33 +430,119 @@ export function StatusReport({ projectId }: StatusReportProps) {
           const META_H    = 30          // px — month/day header rows combined
 
           // ── date range ───────────────────────────────────────────────────
-          const rangeStart = new Date(start.getFullYear(), start.getMonth(), 1)
+          const rangeStart = dateRange?.from ? new Date(dateRange.from) : new Date(start.getFullYear(), start.getMonth(), 1)
           rangeStart.setHours(0, 0, 0, 0)
-          const rangeEnd   = new Date(ganttEnd.getFullYear(), ganttEnd.getMonth() + 1, 0)
+          const rangeEnd   = dateRange?.to ? new Date(dateRange.to) : new Date(ganttEnd.getFullYear(), ganttEnd.getMonth() + 1, 0)
           rangeEnd.setHours(23, 59, 59, 999)
 
-          const days: Date[] = []
-          const cur = new Date(rangeStart)
-          while (cur <= rangeEnd) {
-            days.push(new Date(cur))
-            cur.setDate(cur.getDate() + 1)
-          }
-          const totalDays = days.length
-
-          // DAY_W is calculated so the whole grid fits exactly within PDF_WIDTH
-          const availableForBars = PDF_WIDTH - BODY_PAD - LABEL_W
-          const DAY_W = Math.max(4, Math.floor(availableForBars / Math.max(1, totalDays)))
-          const gridW = LABEL_W + totalDays * DAY_W   // will be <= PDF_WIDTH - BODY_PAD
-
-          // ── month spans ──────────────────────────────────────────────────
           const MONTHS_FULL_LOCAL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
-          const monthSpansPdf: { label: string; count: number; startIdx: number }[] = []
-          days.forEach((d, i) => {
-            const label = `${MONTHS_FULL_LOCAL[d.getMonth()]} ${d.getFullYear()}`
-            if (!monthSpansPdf.length || monthSpansPdf[monthSpansPdf.length - 1].label !== label) {
-              monthSpansPdf.push({ label, count: 1, startIdx: i })
+          const MONTHS_SHORT_LOCAL = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+
+          // Generate columns for PDF based on viewMode
+          const columnsPdf: any[] = []
+          if (viewMode === 'day') {
+            const cur = new Date(rangeStart)
+            while (cur <= rangeEnd) {
+              const d = new Date(cur)
+              const mIdx = d.getMonth()
+              const y = d.getFullYear()
+              columnsPdf.push({
+                start: d,
+                end: d,
+                label: String(d.getDate()),
+                sublabel: String(d.getDate()),
+                isWeekend: d.getDay() === 0 || d.getDay() === 6,
+                isFirstOfGroup: d.getDate() === 1 && columnsPdf.length > 0,
+                key: `day-${columnsPdf.length}`,
+                groupKey: `${y}-${mIdx}`,
+                groupLabel: `${MONTHS_FULL_LOCAL[mIdx]} ${y}`,
+              })
+              cur.setDate(cur.getDate() + 1)
+            }
+          } else if (viewMode === 'week') {
+            let curr = new Date(rangeStart)
+            const dayOfWeek = curr.getDay()
+            const diff = curr.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)
+            curr = new Date(curr.setDate(diff))
+            curr.setHours(0, 0, 0, 0)
+
+            const endWeek = new Date(rangeEnd)
+            const endDayOfWeek = endWeek.getDay()
+            const endDiff = endWeek.getDate() + (endDayOfWeek === 0 ? 0 : 7 - endDayOfWeek)
+            const endWeekAdjusted = new Date(endWeek.setDate(endDiff))
+            endWeekAdjusted.setHours(23, 59, 59, 999)
+
+            while (curr <= endWeekAdjusted) {
+              const wStart = new Date(curr)
+              const wEnd = new Date(curr)
+              wEnd.setDate(wEnd.getDate() + 6)
+              wEnd.setHours(23, 59, 59, 999)
+
+              const oneJan = new Date(wStart.getFullYear(), 0, 1)
+              const numberOfDays = Math.floor((wStart.getTime() - oneJan.getTime()) / (24 * 60 * 60 * 1000))
+              const weekNum = Math.ceil((wStart.getDay() + 1 + numberOfDays) / 7)
+
+              const mIdx = wStart.getMonth()
+              const y = wStart.getFullYear()
+
+              columnsPdf.push({
+                start: wStart,
+                end: wEnd,
+                label: `Sem. ${weekNum}`,
+                sublabel: `${wStart.getDate().toString().padStart(2, '0')}/${(wStart.getMonth()+1).toString().padStart(2, '0')}`,
+                isWeekend: false,
+                isFirstOfGroup: wStart.getDate() <= 7 && columnsPdf.length > 0,
+                key: `week-${columnsPdf.length}`,
+                groupKey: `${y}-${mIdx}`,
+                groupLabel: `${MONTHS_FULL_LOCAL[mIdx]} ${y}`,
+              })
+              curr.setDate(curr.getDate() + 7)
+            }
+          } else {
+            // month
+            let curr = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1)
+            curr.setHours(0, 0, 0, 0)
+
+            const endMonth = new Date(rangeEnd.getFullYear(), rangeEnd.getMonth() + 1, 0)
+            endMonth.setHours(23, 59, 59, 999)
+
+            while (curr <= endMonth) {
+              const mStart = new Date(curr)
+              const mEnd = new Date(curr.getFullYear(), curr.getMonth() + 1, 0)
+              mEnd.setHours(23, 59, 59, 999)
+
+              const y = mStart.getFullYear()
+              columnsPdf.push({
+                start: mStart,
+                end: mEnd,
+                label: MONTHS_FULL_LOCAL[mStart.getMonth()],
+                sublabel: MONTHS_SHORT_LOCAL[mStart.getMonth()],
+                isWeekend: false,
+                isFirstOfGroup: columnsPdf.length > 0 && mStart.getFullYear() !== columnsPdf[columnsPdf.length-1].start.getFullYear(),
+                key: `month-${columnsPdf.length}`,
+                groupKey: `${y}`,
+                groupLabel: `${y}`,
+              })
+              curr.setMonth(curr.getMonth() + 1)
+            }
+          }
+
+          const totalCols = columnsPdf.length
+          const availableForBars = PDF_WIDTH - BODY_PAD - LABEL_W
+          const colWidthPdf = viewMode === 'day'
+            ? Math.max(4, Math.floor(availableForBars / Math.max(1, totalCols)))
+            : Math.max(viewMode === 'week' ? 20 : 50, Math.floor(availableForBars / Math.max(1, totalCols)))
+          const gridW = LABEL_W + totalCols * colWidthPdf
+
+          // ── month/year spans for PDF ──────────────────────────────────────
+          const groupSpansPdf: { label: string; count: number; key: string }[] = []
+          columnsPdf.forEach((col) => {
+            const key = col.groupKey
+            const label = col.groupLabel
+            if (!groupSpansPdf.length || groupSpansPdf[groupSpansPdf.length - 1].key !== key) {
+              groupSpansPdf.push({ key, label, count: 1 })
             } else {
-              monthSpansPdf[monthSpansPdf.length - 1].count++
+              groupSpansPdf[groupSpansPdf.length - 1].count++
             }
           })
 
@@ -433,26 +552,36 @@ export function StatusReport({ projectId }: StatusReportProps) {
             .map(t => {
               const ts = new Date(t.actualStartDate || t.createdAt); ts.setHours(0,0,0,0)
               const te = new Date(t.actualEndDate || t.deadline || new Date(ts.getTime() + 86400000)); te.setHours(23,59,59,999)
-              const startDay = Math.max(0, Math.floor((ts.getTime() - rangeStart.getTime()) / 86400000))
-              const endDay   = Math.min(totalDays - 1, Math.floor((te.getTime() - rangeStart.getTime()) / 86400000))
-              if (endDay < 0 || startDay >= totalDays) return null
-              return { ...t, startDay, endDay }
+              
+              let startCol = -1
+              let endCol = -1
+
+              for (let idx = 0; idx < columnsPdf.length; idx++) {
+                const col = columnsPdf[idx]
+                if (ts <= col.end && te >= col.start) {
+                  if (startCol === -1) startCol = idx
+                  endCol = idx
+                }
+              }
+
+              if (startCol === -1 || endCol === -1) return null
+              return { ...t, startCol, endCol }
             })
             .filter((t): t is NonNullable<typeof t> => t !== null)
             .sort((a, b) => {
               if (!a.parentId && b.parentId) return -1
               if (a.parentId && !b.parentId) return 1
-              return a.startDay - b.startDay
+              return a.startCol - b.startCol
             })
 
           const totalH = HEADER_H + META_H + ganttTasks.length * ROW_H + 4
           const pdfH   = Math.max(PDF_HEIGHT, totalH)
 
           // ── bar colours ──────────────────────────────────────────────────
-          const barColour = (status: string) => {
-            if (status === 'done')        return '#F9A825'  // amarelo — concluído
-            if (status === 'in-progress') return '#006838'  // verde — em progresso
-            return '#94a3b8'
+          const barColour = (progress: number) => {
+            if (progress === 100)        return '#006838'  // verde — concluído
+            if (progress > 0 && progress < 100) return '#F9A825'  // amarelo — em progresso
+            return '#94a3b8' // cinza
           }
 
           return (
@@ -478,8 +607,8 @@ export function StatusReport({ projectId }: StatusReportProps) {
                   <div style={{ display: 'flex', height: 16 }}>
                     <div style={{ width: LABEL_W, flexShrink: 0, fontSize: 9, fontWeight: 900, textTransform: 'uppercase', color: '#006838', display: 'flex', alignItems: 'center', paddingLeft: 4 }}>Período</div>
                     <div style={{ display: 'flex', flex: 1 }}>
-                      {monthSpansPdf.map((m, i) => (
-                        <div key={i} style={{ width: m.count * DAY_W, flexShrink: 0, background: '#f0fdf4', borderLeft: '1px solid #e2e8f0', fontSize: 8, fontWeight: 900, textTransform: 'uppercase', color: '#006838', textAlign: 'center', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      {groupSpansPdf.map((m, i) => (
+                        <div key={i} style={{ width: m.count * colWidthPdf, flexShrink: 0, background: '#f0fdf4', borderLeft: '1px solid #e2e8f0', fontSize: 8, fontWeight: 900, textTransform: 'uppercase', color: '#006838', textAlign: 'center', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                           {m.label}
                         </div>
                       ))}
@@ -490,9 +619,17 @@ export function StatusReport({ projectId }: StatusReportProps) {
                   <div style={{ display: 'flex', height: 14, borderBottom: '2px solid #006838', marginBottom: 2 }}>
                     <div style={{ width: LABEL_W, flexShrink: 0, fontSize: 8, fontWeight: 900, textTransform: 'uppercase', color: '#64748b', display: 'flex', alignItems: 'center', paddingLeft: 4 }}>Atividade</div>
                     <div style={{ display: 'flex', flex: 1 }}>
-                      {days.map((d, i) => (
-                        <div key={i} style={{ width: DAY_W, flexShrink: 0, fontSize: 6, textAlign: 'center', color: '#94a3b8', background: [0,6].includes(d.getDay()) ? '#f8fafc' : '#ffffff', borderLeft: d.getDate() === 1 && i > 0 ? '1.5px solid #006838' : '1px solid #f1f5f9' }}>
-                          {d.getDate()}
+                      {columnsPdf.map((col, i) => (
+                        <div key={col.key} style={{
+                          width: colWidthPdf,
+                          flexShrink: 0,
+                          fontSize: viewMode === 'day' ? 6 : 7,
+                          textAlign: 'center',
+                          color: '#94a3b8',
+                          background: col.isWeekend ? '#f8fafc' : '#ffffff',
+                          borderLeft: col.isFirstOfGroup ? '1.5px solid #006838' : '1px solid #f1f5f9'
+                        }}>
+                          {viewMode === 'day' ? col.label : col.sublabel}
                         </div>
                       ))}
                     </div>
@@ -501,9 +638,9 @@ export function StatusReport({ projectId }: StatusReportProps) {
                   {/* ── Task rows ──────────────────────────────── */}
                   {ganttTasks.map((task, idx) => {
                     const isMacro = !task.parentId
-                    const barW = Math.max(1, (task.endDay - task.startDay + 1)) * DAY_W
-                    const barX = task.startDay * DAY_W
-                    const bg   = barColour(task.status)
+                    const barW = (task.endCol - task.startCol + 1) * colWidthPdf
+                    const barX = task.startCol * colWidthPdf
+                    const bg   = barColour(task.progress)
                     return (
                       <div key={task.id} style={{ display: 'flex', height: ROW_H, borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#ffffff' : '#fafafa' }}>
                         {/* Label — truncation must be on a block div with explicit width */}
@@ -575,9 +712,9 @@ export function StatusReport({ projectId }: StatusReportProps) {
                           const succ = ganttTasks[succIdx]
 
                           // Absolute X coordinates within the SVG (offset by LABEL_W)
-                          const startX = LABEL_W + (pred.endDay + 1) * DAY_W
+                          const startX = LABEL_W + (pred.endCol + 1) * colWidthPdf
                           const startY = META_H + predIdx * ROW_H + ROW_H / 2
-                          const endX   = LABEL_W + succ.startDay * DAY_W
+                          const endX   = LABEL_W + succ.startCol * colWidthPdf
                           const endY   = META_H + succIdx * ROW_H + ROW_H / 2
 
                           let path = ''

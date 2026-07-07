@@ -74,7 +74,7 @@ export function MonthlyKpiDialog({ editingMonthly, setEditingMonthly, onSave }: 
   }
 
   const handleAutoDistribute = () => {
-    const isFraction = true; // Always distribute target evenly across months
+    const isFraction = editingMonthly.distribution === 'fraction' || (!editingMonthly.distribution && editingMonthly.aggregation === 'sum');
     const perMonth = isFraction 
       ? Math.round((editingMonthly.target / 12) * 100) / 100 
       : editingMonthly.target
@@ -133,7 +133,9 @@ export function MonthlyKpiDialog({ editingMonthly, setEditingMonthly, onSave }: 
     ? totalCurrent 
     : (validCurrentMonths > 0 ? totalCurrent / validCurrentMonths : 0)
   
-  const finalTarget = totalTarget // Always sum the monthly targets to compare against the annual target
+  const finalTarget = (editingMonthly.distribution === 'global' || editingMonthly.aggregation === 'average')
+    ? (validTargetMonths > 0 ? totalTarget / validTargetMonths : 0)
+    : totalTarget
 
   const isTargetMismatch = Math.abs(finalTarget - editingMonthly.target) > 0.01
 
