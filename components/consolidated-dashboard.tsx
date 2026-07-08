@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { KPI, Project } from '@/lib/types'
+import { KPI, Project, ProjectStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { LogoPrincesa } from '@/components/logo-princesa'
 import { Notifications } from '@/components/notifications'
@@ -21,6 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   'Frota': <Bus className="w-4 h-4" />,
@@ -50,9 +58,27 @@ export function ConsolidatedDashboard() {
   } = useProjectStore()
 
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [selectedOwner, setSelectedOwner] = useState<string>('all')
-  const [showCompleted, setShowCompleted] = useState<boolean>(false)
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedOwners, setSelectedOwners] = useState<string[]>([])
+  const [selectedStatuses, setSelectedStatuses] = useState<ProjectStatus[]>(['active'])
+
+  const toggleCategory = (cat: string) => {
+    setSelectedCategories(prev =>
+      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    )
+  }
+
+  const toggleOwner = (ownerId: string) => {
+    setSelectedOwners(prev =>
+      prev.includes(ownerId) ? prev.filter(id => id !== ownerId) : [...prev, ownerId]
+    )
+  }
+
+  const toggleStatus = (status: ProjectStatus) => {
+    setSelectedStatuses(prev =>
+      prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
+    )
+  }
 
   const { users } = useProjectStore()
 
@@ -77,8 +103,7 @@ export function ConsolidatedDashboard() {
     if (!hasAccess) return false
 
     // Filter by Status
-    if (!showCompleted && project.status === 'completed') return false
-    if (showCompleted && project.status !== 'completed') return false
+    if (selectedStatuses.length > 0 && !selectedStatuses.includes(project.status as ProjectStatus)) return false
 
     // Filter by year: project must have a goal in that year or have been created in/before that year
     const hasGoalInYear = project.yearlyGoals?.some((g: any) => g.year === selectedYear)
@@ -86,13 +111,13 @@ export function ConsolidatedDashboard() {
     if (!hasGoalInYear && !wasCreatedInOrBefore) return false
 
     // Filter by Category
-    if (selectedCategory !== 'all' && project.category !== selectedCategory) return false
+    if (selectedCategories.length > 0 && !selectedCategories.includes(project.category || 'geral')) return false
 
     // Filter by Owner
-    if (selectedOwner !== 'all' && project.ownerId !== selectedOwner) return false
+    if (selectedOwners.length > 0 && !selectedOwners.includes(project.ownerId)) return false
 
     return true
-  }), [projects, user, selectedYear, selectedCategory, selectedOwner])
+  }), [projects, user, selectedYear, selectedCategories, selectedOwners, selectedStatuses])
 
   // Filter tasks based on accessible projects
   const accessibleProjectIds = new Set(filteredProjects.map(p => p.id))
@@ -124,9 +149,11 @@ export function ConsolidatedDashboard() {
     const kpisToUse = yearGoal ? yearGoal.kpis : (p.generalKpis || [])
 
     kpisToUse.filter((k: KPI) =>
-      k.name.toLowerCase().includes('receita') ||
-      k.name.toLowerCase().includes('investimento') ||
-      k.unit === 'R$'
+      k.includeInFinancialProgress !== undefined
+        ? k.includeInFinancialProgress
+        : (k.name.toLowerCase().includes('receita') ||
+           k.name.toLowerCase().includes('investimento') ||
+           k.unit === 'R$')
     ).forEach((k: KPI) => { globalTarget += k.target; globalCurrent += k.current })
   })
   const globalPct = globalTarget > 0 ? Math.round((globalCurrent / globalTarget) * 100) : 0
@@ -177,51 +204,103 @@ export function ConsolidatedDashboard() {
           {/* Category Filter */}
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest hidden lg:block">Cat:</span>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-[110px] h-8 text-[10px] font-bold border-zinc-200 bg-white">
-                <SelectValue placeholder="Categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-[10px] font-bold">Todas Categorias</SelectItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-8 text-[10px] font-bold border-zinc-200 bg-white flex items-center justify-between gap-1.5 px-2 min-w-[110px]">
+                  <span>
+                    {selectedCategories.length === 0
+                      ? "Todas Categorias"
+                      : selectedCategories.length === 1
+                        ? selectedCategories[0]
+                        : `${selectedCategories.length} Sel.`}
+                  </span>
+                  <span className="text-[9px] opacity-50">▼</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[160px] bg-white border border-zinc-200">
+                <DropdownMenuLabel className="text-[9px] font-black uppercase text-zinc-400">Categorias</DropdownMenuLabel>
+                <DropdownMenuSeparator />
                 {Array.from(new Set(projects.map(p => p.category || 'geral'))).map(cat => (
-                  <SelectItem key={cat} value={cat} className="text-[10px] font-bold">
+                  <DropdownMenuCheckboxItem
+                    key={cat}
+                    checked={selectedCategories.includes(cat)}
+                    onCheckedChange={() => toggleCategory(cat)}
+                    onSelect={(e) => e.preventDefault()}
+                    className="text-[10px] font-bold"
+                  >
                     {cat}
-                  </SelectItem>
+                  </DropdownMenuCheckboxItem>
                 ))}
-              </SelectContent>
-            </Select>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Owner Filter */}
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest hidden lg:block">Dono:</span>
-            <Select value={selectedOwner} onValueChange={setSelectedOwner}>
-              <SelectTrigger className="w-[110px] h-8 text-[10px] font-bold border-zinc-200 bg-white">
-                <SelectValue placeholder="Responsável" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-[10px] font-bold">Todos Responsáveis</SelectItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-8 text-[10px] font-bold border-zinc-200 bg-white flex items-center justify-between gap-1.5 px-2 min-w-[110px]">
+                  <span>
+                    {selectedOwners.length === 0
+                      ? "Todos Responsáveis"
+                      : selectedOwners.length === 1
+                        ? users.find(u => u.id === selectedOwners[0])?.name.split(' ')[0] || "1 Sel."
+                        : `${selectedOwners.length} Sel.`}
+                  </span>
+                  <span className="text-[9px] opacity-50">▼</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[160px] bg-white border border-zinc-200">
+                <DropdownMenuLabel className="text-[9px] font-black uppercase text-zinc-400">Responsáveis</DropdownMenuLabel>
+                <DropdownMenuSeparator />
                 {users.map(u => (
-                  <SelectItem key={u.id} value={u.id} className="text-[10px] font-bold">
+                  <DropdownMenuCheckboxItem
+                    key={u.id}
+                    checked={selectedOwners.includes(u.id)}
+                    onCheckedChange={() => toggleOwner(u.id)}
+                    onSelect={(e) => e.preventDefault()}
+                    className="text-[10px] font-bold"
+                  >
                     {u.name.split(' ')[0]}
-                  </SelectItem>
+                  </DropdownMenuCheckboxItem>
                 ))}
-              </SelectContent>
-            </Select>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Status Filter */}
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest hidden lg:block">Status:</span>
-            <Select value={showCompleted ? 'completed' : 'active'} onValueChange={(v) => setShowCompleted(v === 'completed')}>
-              <SelectTrigger className="w-[100px] h-8 text-[10px] font-bold border-zinc-200 bg-white">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active" className="text-[10px] font-bold">Ativos</SelectItem>
-                <SelectItem value="completed" className="text-[10px] font-bold">Concluídos</SelectItem>
-              </SelectContent>
-            </Select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-8 text-[10px] font-bold border-zinc-200 bg-white flex items-center justify-between gap-1.5 px-2 min-w-[100px]">
+                  <span>
+                    {selectedStatuses.length === 0
+                      ? "Todos Status"
+                      : selectedStatuses.length === 1
+                        ? selectedStatuses[0] === 'active' ? 'Ativos' : selectedStatuses[0] === 'completed' ? 'Concluídos' : 'Arquivados'
+                        : `${selectedStatuses.length} Sel.`}
+                  </span>
+                  <span className="text-[9px] opacity-50">▼</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[160px] bg-white border border-zinc-200">
+                <DropdownMenuLabel className="text-[9px] font-black uppercase text-zinc-400">Status</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {(['active', 'completed', 'archived'] as const).map(s => (
+                  <DropdownMenuCheckboxItem
+                    key={s}
+                    checked={selectedStatuses.includes(s)}
+                    onCheckedChange={() => toggleStatus(s)}
+                    onSelect={(e) => e.preventDefault()}
+                    className="text-[10px] font-bold"
+                  >
+                    {s === 'active' ? 'Ativos' : s === 'completed' ? 'Concluídos' : 'Arquivados'}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <div className="hidden sm:block h-6 w-px bg-zinc-200 mx-1" />

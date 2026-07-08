@@ -30,6 +30,7 @@ export interface KPI {
   aggregation: AGGREGATION_MODE
   distribution?: DISTRIBUTION_MODE
   monthly?: MonthlyData[] // Historico mensal
+  includeInFinancialProgress?: boolean
 }
 
 export interface YearlyGoal {

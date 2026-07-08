@@ -2,11 +2,12 @@
 
 import { useState, useMemo } from 'react'
 import { useProjectStore } from '@/lib/store'
-import { METHODOLOGY_INFO } from '@/lib/types'
+import { METHODOLOGY_INFO, ProjectStatus } from '@/lib/types'
 import { LogoPrincesa } from '@/components/logo-princesa'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { FolderKanban, ListTodo, CheckCircle2, Clock, TrendingUp, Users } from 'lucide-react'
 import { UserAvatar } from './user-avatar'
 import {
@@ -16,6 +17,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface DashboardProps {
   onNewProject: () => void
@@ -32,9 +41,27 @@ export function Dashboard({ onNewProject }: DashboardProps) {
   } = useProjectStore()
 
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [selectedOwner, setSelectedOwner] = useState<string>('all')
-  const [showCompleted, setShowCompleted] = useState<boolean>(false)
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedOwners, setSelectedOwners] = useState<string[]>([])
+  const [selectedStatuses, setSelectedStatuses] = useState<ProjectStatus[]>(['active'])
+
+  const toggleCategory = (cat: string) => {
+    setSelectedCategories(prev =>
+      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    )
+  }
+
+  const toggleOwner = (ownerId: string) => {
+    setSelectedOwners(prev =>
+      prev.includes(ownerId) ? prev.filter(id => id !== ownerId) : [...prev, ownerId]
+    )
+  }
+
+  const toggleStatus = (status: ProjectStatus) => {
+    setSelectedStatuses(prev =>
+      prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
+    )
+  }
 
   const availableYears = useMemo(() => {
     const years = new Set<number>()
@@ -56,15 +83,14 @@ export function Dashboard({ onNewProject }: DashboardProps) {
     
     if (!hasAccess) return false
 
-    if (!showCompleted && project.status === 'completed') return false
-    if (showCompleted && project.status !== 'completed') return false
+    if (selectedStatuses.length > 0 && !selectedStatuses.includes(project.status as ProjectStatus)) return false
 
     const hasGoalInYear = project.yearlyGoals?.some((g: any) => g.year === selectedYear)
     const wasCreatedInOrBefore = project.createdAt && new Date(project.createdAt).getFullYear() <= selectedYear
     if (!hasGoalInYear && !wasCreatedInOrBefore) return false
 
-    if (selectedCategory !== 'all' && project.category !== selectedCategory) return false
-    if (selectedOwner !== 'all' && project.ownerId !== selectedOwner) return false
+    if (selectedCategories.length > 0 && !selectedCategories.includes(project.category || 'geral')) return false
+    if (selectedOwners.length > 0 && !selectedOwners.includes(project.ownerId)) return false
 
     return true
   })
@@ -130,51 +156,103 @@ export function Dashboard({ onNewProject }: DashboardProps) {
           {/* Category Filter */}
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest hidden sm:block">Cat:</span>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-[140px] h-9 text-xs font-bold border-border bg-background">
-                <SelectValue placeholder="Categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs font-bold">Todas Categorias</SelectItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-9 text-xs font-bold border-border bg-background flex items-center justify-between gap-2 px-3 min-w-[140px]">
+                  <span>
+                    {selectedCategories.length === 0
+                      ? "Todas Categorias"
+                      : selectedCategories.length === 1
+                        ? selectedCategories[0]
+                        : `${selectedCategories.length} Selecionadas`}
+                  </span>
+                  <span className="text-[10px] opacity-50">▼</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[180px] bg-background border border-border">
+                <DropdownMenuLabel className="text-[10px] font-black uppercase text-muted-foreground">Categorias</DropdownMenuLabel>
+                <DropdownMenuSeparator />
                 {Array.from(new Set(projects.map(p => p.category || 'geral'))).map(cat => (
-                  <SelectItem key={cat} value={cat} className="text-xs font-bold">
+                  <DropdownMenuCheckboxItem
+                    key={cat}
+                    checked={selectedCategories.includes(cat)}
+                    onCheckedChange={() => toggleCategory(cat)}
+                    onSelect={(e) => e.preventDefault()}
+                    className="text-xs font-bold"
+                  >
                     {cat}
-                  </SelectItem>
+                  </DropdownMenuCheckboxItem>
                 ))}
-              </SelectContent>
-            </Select>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Owner Filter */}
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest hidden sm:block">Dono:</span>
-            <Select value={selectedOwner} onValueChange={setSelectedOwner}>
-              <SelectTrigger className="w-[160px] h-9 text-xs font-bold border-border bg-background">
-                <SelectValue placeholder="Responsável" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs font-bold">Todos Responsáveis</SelectItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-9 text-xs font-bold border-border bg-background flex items-center justify-between gap-2 px-3 min-w-[160px]">
+                  <span>
+                    {selectedOwners.length === 0
+                      ? "Todos Responsáveis"
+                      : selectedOwners.length === 1
+                        ? users.find(u => u.id === selectedOwners[0])?.name.split(' ')[0] || "1 Selecionado"
+                        : `${selectedOwners.length} Selecionados`}
+                  </span>
+                  <span className="text-[10px] opacity-50">▼</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[180px] bg-background border border-border">
+                <DropdownMenuLabel className="text-[10px] font-black uppercase text-muted-foreground">Responsáveis</DropdownMenuLabel>
+                <DropdownMenuSeparator />
                 {users.map(u => (
-                  <SelectItem key={u.id} value={u.id} className="text-xs font-bold">
+                  <DropdownMenuCheckboxItem
+                    key={u.id}
+                    checked={selectedOwners.includes(u.id)}
+                    onCheckedChange={() => toggleOwner(u.id)}
+                    onSelect={(e) => e.preventDefault()}
+                    className="text-xs font-bold"
+                  >
                     {u.name.split(' ')[0]}
-                  </SelectItem>
+                  </DropdownMenuCheckboxItem>
                 ))}
-              </SelectContent>
-            </Select>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Status Filter */}
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest hidden sm:block">Status:</span>
-            <Select value={showCompleted ? 'completed' : 'active'} onValueChange={(v) => setShowCompleted(v === 'completed')}>
-              <SelectTrigger className="w-[120px] h-9 text-xs font-bold border-border bg-background">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active" className="text-xs font-bold">Ativos</SelectItem>
-                <SelectItem value="completed" className="text-xs font-bold">Concluídos</SelectItem>
-              </SelectContent>
-            </Select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-9 text-xs font-bold border-border bg-background flex items-center justify-between gap-2 px-3 min-w-[120px]">
+                  <span>
+                    {selectedStatuses.length === 0
+                      ? "Todos Status"
+                      : selectedStatuses.length === 1
+                        ? selectedStatuses[0] === 'active' ? 'Ativos' : selectedStatuses[0] === 'completed' ? 'Concluídos' : 'Arquivados'
+                        : `${selectedStatuses.length} Selecionados`}
+                  </span>
+                  <span className="text-[10px] opacity-50">▼</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[180px] bg-background border border-border">
+                <DropdownMenuLabel className="text-[10px] font-black uppercase text-muted-foreground">Status</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {(['active', 'completed', 'archived'] as const).map(s => (
+                  <DropdownMenuCheckboxItem
+                    key={s}
+                    checked={selectedStatuses.includes(s)}
+                    onCheckedChange={() => toggleStatus(s)}
+                    onSelect={(e) => e.preventDefault()}
+                    className="text-xs font-bold"
+                  >
+                    {s === 'active' ? 'Ativos' : s === 'completed' ? 'Concluídos' : 'Arquivados'}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

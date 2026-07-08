@@ -10,6 +10,7 @@ import { MonthlyKpiDialog, EditingMonthly } from './monthly-kpi-dialog'
 import { Progress } from '@/components/ui/progress'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { KPI } from '@/lib/types'
 
 interface KpiManagementProps {
@@ -25,6 +26,7 @@ interface EditingKpi {
   unit: string
   aggregation: 'sum' | 'average'
   distribution: 'fraction' | 'global'
+  includeInFinancialProgress: boolean
 }
 
 export function KpiManagement({ projectId }: KpiManagementProps) {
@@ -56,6 +58,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
   const [newKpiUnit, setNewKpiUnit] = useState('')
   const [newKpiAggregation, setNewKpiAggregation] = useState<'sum' | 'average'>('sum')
   const [newKpiDistribution, setNewKpiDistribution] = useState<'fraction' | 'global'>('fraction')
+  const [newKpiIncludeInFinancialProgress, setNewKpiIncludeInFinancialProgress] = useState(true)
 
   if (!project) return null
 
@@ -79,7 +82,8 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
       current: 0,
       unit: newKpiUnit.trim() || '',
       aggregation: newKpiAggregation,
-      distribution: newKpiDistribution
+      distribution: newKpiDistribution,
+      includeInFinancialProgress: newKpiIncludeInFinancialProgress
     }
     const updatedKpis = [...kpis, newKpi]
     const updatedGoals = yearlyGoals.map(yg => ({
@@ -92,6 +96,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
     }))
     updateProject(projectId, { generalKpis: updatedKpis, yearlyGoals: updatedGoals })
     setNewKpiName(''); setNewKpiTarget(''); setNewKpiUnit(''); setNewKpiAggregation('sum'); setNewKpiDistribution('fraction')
+    setNewKpiIncludeInFinancialProgress(true)
     setShowKpiForm(false)
   }
 
@@ -107,13 +112,13 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
     if (!editingGeneral) return
     const newTarget = Number(editingGeneral.target)
     const updatedKpis = kpis.map(k => k.id === editingGeneral.id
-      ? { ...k, name: editingGeneral.name, target: newTarget, unit: editingGeneral.unit, aggregation: editingGeneral.aggregation, distribution: editingGeneral.distribution }
+      ? { ...k, name: editingGeneral.name, target: newTarget, unit: editingGeneral.unit, aggregation: editingGeneral.aggregation, distribution: editingGeneral.distribution, includeInFinancialProgress: editingGeneral.includeInFinancialProgress }
       : k
     )
     const updatedGoals = yearlyGoals.map(yg => ({
       ...yg,
       kpis: yg.kpis.map(k => k.id === editingGeneral.id
-        ? { ...k, name: editingGeneral.name, unit: editingGeneral.unit, aggregation: editingGeneral.aggregation, distribution: editingGeneral.distribution }
+        ? { ...k, name: editingGeneral.name, unit: editingGeneral.unit, aggregation: editingGeneral.aggregation, distribution: editingGeneral.distribution, includeInFinancialProgress: editingGeneral.includeInFinancialProgress }
         : k
       )
     }))
@@ -431,6 +436,16 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                   ))}
                 </div>
               </div>
+              <div className="col-span-1 md:col-span-4 flex items-center gap-2 mt-2 p-2 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors">
+                <Checkbox
+                  id="newKpiFinancial"
+                  checked={newKpiIncludeInFinancialProgress}
+                  onCheckedChange={(checked) => setNewKpiIncludeInFinancialProgress(!!checked)}
+                />
+                <label htmlFor="newKpiFinancial" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                  Atribuir ao Progresso Financeiro (Painel Consolidado)
+                </label>
+              </div>
             </div>
             
             {newKpiName && newKpiTarget && numYears > 1 && (
@@ -547,6 +562,16 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                               ))}
                             </div>
                           </div>
+                          <div className="col-span-2 flex items-center gap-2 p-2 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors">
+                            <Checkbox
+                              id={`editFinancial-${editingGeneral.id}`}
+                              checked={editingGeneral.includeInFinancialProgress}
+                              onCheckedChange={(checked) => setEditingGeneral({ ...editingGeneral, includeInFinancialProgress: !!checked })}
+                            />
+                            <label htmlFor={`editFinancial-${editingGeneral.id}`} className="text-[10px] font-bold text-slate-700 cursor-pointer select-none">
+                              Atribuir ao Progresso Financeiro (Painel Consolidado)
+                            </label>
+                          </div>
                         </div>
                         <div className="flex gap-2 justify-end pt-2 border-t">
                           <Button size="sm" onClick={handleSaveGeneralKpi} className="bg-slate-900 hover:bg-slate-800 text-white">Salvar</Button>
@@ -579,7 +604,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                         
                         {/* Action buttons (fade in on hover) */}
                         <div className="absolute top-4 right-4 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 backdrop-blur-md rounded-xl p-1 border border-white/10 shadow-2xl">
-                          <button onClick={() => setEditingGeneral({ id: generalKpi.id, name: generalKpi.name, target: generalKpi.target.toString(), unit: generalKpi.unit, aggregation: generalKpi.aggregation, distribution: generalKpi.distribution || (generalKpi.aggregation === 'sum' ? 'fraction' : 'global') })} className="p-1.5 hover:bg-white/20 rounded-lg text-white/90 hover:text-white transition-colors" title="Editar">
+                          <button onClick={() => setEditingGeneral({ id: generalKpi.id, name: generalKpi.name, target: generalKpi.target.toString(), unit: generalKpi.unit, aggregation: generalKpi.aggregation, distribution: generalKpi.distribution || (generalKpi.aggregation === 'sum' ? 'fraction' : 'global'), includeInFinancialProgress: generalKpi.includeInFinancialProgress !== false })} className="p-1.5 hover:bg-white/20 rounded-lg text-white/90 hover:text-white transition-colors" title="Editar">
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button onClick={() => handleRedistribute(generalKpi.id)} className="p-1.5 hover:bg-white/20 rounded-lg text-white/90 hover:text-white transition-colors" title="Repartir meta nos anos">
