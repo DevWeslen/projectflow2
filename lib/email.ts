@@ -31,7 +31,7 @@ const transporter = nodemailer.createTransport(smtpConfig);
 export const sendEmail = async (payload: EmailPayload) => {
   const fromName = process.env.SMTP_FROM_NAME ?? "Gestão de Projetos";
   const fromEmail = process.env.SMTP_USER ?? "notificacoes@princesadoscampos.com.br";
-  
+
   // Verifica a existência do logo para adicionar inline
   const logoPath = path.join(process.cwd(), "public", "PrincesadosCampos-positivo2-vertical (2).jpg");
   let attachments: any[] = [];
@@ -195,7 +195,7 @@ export const getProjectEmailTemplate = (project: {
         <tr>
           <td style="background-color:#f9fafb;border-top:1px solid #d1d5db;padding:16px 24px;text-align:center;">
             <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#6b7280;">Este é um e-mail automático enviado pelo sistema Torre de Controle.</p>
-            <p style="margin:4px 0 0;font-family:Arial,sans-serif;font-size:11px;color:#006838;font-weight:bold;">Expresso Princesa dos Campos S/A</p>
+            <p style="margin:4px 0 0;font-family:Arial,sans-serif;font-size:11px;color:#006838;font-weight:bold;">Princesa dos Campos S/A</p>
           </td>
         </tr>
 
@@ -301,7 +301,7 @@ export const getTaskEmailTemplate = (
         <tr>
           <td style="background-color:#f9fafb;border-top:1px solid #d1d5db;padding:16px 24px;text-align:center;">
             <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#6b7280;">Este é um e-mail automático enviado pelo sistema Torre de Controle.</p>
-            <p style="margin:4px 0 0;font-family:Arial,sans-serif;font-size:11px;color:#006838;font-weight:bold;">Expresso Princesa dos Campos S/A</p>
+            <p style="margin:4px 0 0;font-family:Arial,sans-serif;font-size:11px;color:#006838;font-weight:bold;">Princesa dos Campos S/A</p>
           </td>
         </tr>
 

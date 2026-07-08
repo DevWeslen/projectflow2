@@ -112,7 +112,7 @@ export function StatusReport({ projectId }: StatusReportProps) {
           // The browser already resolved this to rgb() in getComputedStyle;
           // if it still shows oklab it means the engine returned it verbatim.
           // Force it to transparent as a safe fallback.
-          ;(el.style as unknown as Record<string, string>)[prop] =
+          ; (el.style as unknown as Record<string, string>)[prop] =
             value.startsWith('oklab') || value.startsWith('oklch')
               ? 'transparent'
               : value
@@ -216,7 +216,7 @@ export function StatusReport({ projectId }: StatusReportProps) {
             <Download className="h-3.5 w-3.5" />
             {isExportingPDF ? 'Gerando PDF...' : 'Exportar PDF'}
           </Button>
-          <span><b>Cliente:</b> Expresso Princesa dos Campos</span>
+          <span><b>Cliente:</b>Princesa dos Campos</span>
           <span><b>Patrocinador:</b> Diretoria</span>
           <span><b>Owner:</b> {owner}</span>
           <span><b>Início:</b> {start.toLocaleDateString('pt-BR')}</span>
@@ -360,7 +360,7 @@ export function StatusReport({ projectId }: StatusReportProps) {
 
           {/* Info bar */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 24, padding: '8px 24px', borderBottom: '2.5px solid #006838', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#555' }}>
-            <span><b>Cliente:</b> Expresso Princesa dos Campos</span>
+            <span><b>Cliente:</b>Princesa dos Campos</span>
             <span><b>Patrocinador:</b> Diretoria</span>
             <span><b>Owner:</b> {owner}</span>
             <span><b>Início:</b> {start.toLocaleDateString('pt-BR')}</span>
@@ -423,20 +423,20 @@ export function StatusReport({ projectId }: StatusReportProps) {
         {/* PAGE 2: Cronograma Template — PDF-safe Gantt (no sticky, no overflow, no transform) */}
         {(() => {
           // ── layout constants ──────────────────────────────────────────────
-          const LABEL_W   = 260         // px — left column for task names (wider for long titles)
-          const ROW_H     = 22          // px — row height
-          const BODY_PAD  = 32          // px — left+right padding inside body (16px each)
-          const HEADER_H  = 74          // px — green header height
-          const META_H    = 30          // px — month/day header rows combined
+          const LABEL_W = 260         // px — left column for task names (wider for long titles)
+          const ROW_H = 22          // px — row height
+          const BODY_PAD = 32          // px — left+right padding inside body (16px each)
+          const HEADER_H = 74          // px — green header height
+          const META_H = 30          // px — month/day header rows combined
 
           // ── date range ───────────────────────────────────────────────────
           const rangeStart = dateRange?.from ? new Date(dateRange.from) : new Date(start.getFullYear(), start.getMonth(), 1)
           rangeStart.setHours(0, 0, 0, 0)
-          const rangeEnd   = dateRange?.to ? new Date(dateRange.to) : new Date(ganttEnd.getFullYear(), ganttEnd.getMonth() + 1, 0)
+          const rangeEnd = dateRange?.to ? new Date(dateRange.to) : new Date(ganttEnd.getFullYear(), ganttEnd.getMonth() + 1, 0)
           rangeEnd.setHours(23, 59, 59, 999)
 
-          const MONTHS_FULL_LOCAL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
-          const MONTHS_SHORT_LOCAL = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+          const MONTHS_FULL_LOCAL = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+          const MONTHS_SHORT_LOCAL = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
           // Generate columns for PDF based on viewMode
           const columnsPdf: any[] = []
@@ -489,7 +489,7 @@ export function StatusReport({ projectId }: StatusReportProps) {
                 start: wStart,
                 end: wEnd,
                 label: `Sem. ${weekNum}`,
-                sublabel: `${wStart.getDate().toString().padStart(2, '0')}/${(wStart.getMonth()+1).toString().padStart(2, '0')}`,
+                sublabel: `${wStart.getDate().toString().padStart(2, '0')}/${(wStart.getMonth() + 1).toString().padStart(2, '0')}`,
                 isWeekend: false,
                 isFirstOfGroup: wStart.getDate() <= 7 && columnsPdf.length > 0,
                 key: `week-${columnsPdf.length}`,
@@ -518,7 +518,7 @@ export function StatusReport({ projectId }: StatusReportProps) {
                 label: MONTHS_FULL_LOCAL[mStart.getMonth()],
                 sublabel: MONTHS_SHORT_LOCAL[mStart.getMonth()],
                 isWeekend: false,
-                isFirstOfGroup: columnsPdf.length > 0 && mStart.getFullYear() !== columnsPdf[columnsPdf.length-1].start.getFullYear(),
+                isFirstOfGroup: columnsPdf.length > 0 && mStart.getFullYear() !== columnsPdf[columnsPdf.length - 1].start.getFullYear(),
                 key: `month-${columnsPdf.length}`,
                 groupKey: `${y}`,
                 groupLabel: `${y}`,
@@ -550,9 +550,9 @@ export function StatusReport({ projectId }: StatusReportProps) {
           const ganttTasks = projectTasks
             .filter(t => t.deadline || t.actualStartDate || t.actualEndDate)
             .map(t => {
-              const ts = new Date(t.actualStartDate || t.createdAt); ts.setHours(0,0,0,0)
-              const te = new Date(t.actualEndDate || t.deadline || new Date(ts.getTime() + 86400000)); te.setHours(23,59,59,999)
-              
+              const ts = new Date(t.actualStartDate || t.createdAt); ts.setHours(0, 0, 0, 0)
+              const te = new Date(t.actualEndDate || t.deadline || new Date(ts.getTime() + 86400000)); te.setHours(23, 59, 59, 999)
+
               let startCol = -1
               let endCol = -1
 
@@ -575,11 +575,11 @@ export function StatusReport({ projectId }: StatusReportProps) {
             })
 
           const totalH = HEADER_H + META_H + ganttTasks.length * ROW_H + 4
-          const pdfH   = Math.max(PDF_HEIGHT, totalH)
+          const pdfH = Math.max(PDF_HEIGHT, totalH)
 
           // ── bar colours ──────────────────────────────────────────────────
           const barColour = (progress: number) => {
-            if (progress === 100)        return '#006838'  // verde — concluído
+            if (progress === 100) return '#006838'  // verde — concluído
             if (progress > 0 && progress < 100) return '#F9A825'  // amarelo — em progresso
             return '#94a3b8' // cinza
           }
@@ -588,13 +588,13 @@ export function StatusReport({ projectId }: StatusReportProps) {
             <div
               ref={page2Ref}
               style={{
-                width:      `${PDF_WIDTH}px`,
-                height:     `${pdfH}px`,
+                width: `${PDF_WIDTH}px`,
+                height: `${pdfH}px`,
                 background: '#ffffff',
-                display:    'flex',
+                display: 'flex',
                 flexDirection: 'column',
                 fontFamily: 'Arial, sans-serif',
-                boxSizing:  'border-box'
+                boxSizing: 'border-box'
               }}
             >
               <Header title="Cronograma" />
@@ -640,7 +640,7 @@ export function StatusReport({ projectId }: StatusReportProps) {
                     const isMacro = !task.parentId
                     const barW = (task.endCol - task.startCol + 1) * colWidthPdf
                     const barX = task.startCol * colWidthPdf
-                    const bg   = barColour(task.progress)
+                    const bg = barColour(task.progress)
                     return (
                       <div key={task.id} style={{ display: 'flex', height: ROW_H, borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#ffffff' : '#fafafa' }}>
                         {/* Label — truncation must be on a block div with explicit width */}
@@ -714,8 +714,8 @@ export function StatusReport({ projectId }: StatusReportProps) {
                           // Absolute X coordinates within the SVG (offset by LABEL_W)
                           const startX = LABEL_W + (pred.endCol + 1) * colWidthPdf
                           const startY = META_H + predIdx * ROW_H + ROW_H / 2
-                          const endX   = LABEL_W + succ.startCol * colWidthPdf
-                          const endY   = META_H + succIdx * ROW_H + ROW_H / 2
+                          const endX = LABEL_W + succ.startCol * colWidthPdf
+                          const endY = META_H + succIdx * ROW_H + ROW_H / 2
 
                           let path = ''
                           if (endX >= startX + 10) {
@@ -723,7 +723,7 @@ export function StatusReport({ projectId }: StatusReportProps) {
                             path = `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX - 2} ${endY}`
                           } else {
                             const midX1 = startX + 8
-                            const midY  = startY + ROW_H / 2
+                            const midY = startY + ROW_H / 2
                             const midX2 = endX - 8
                             path = `M ${startX} ${startY} L ${midX1} ${startY} L ${midX1} ${midY} L ${midX2} ${midY} L ${midX2} ${endY} L ${endX - 2} ${endY}`
                           }

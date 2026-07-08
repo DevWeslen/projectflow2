@@ -37,7 +37,7 @@ export function StatusReportKpi({ projectId }: StatusReportKpiProps) {
         </div>
         {/* INFO BAR */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 24, padding: '6px 16px', borderBottom: '2px solid #006838', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: '#333' }}>
-          <span><b>Cliente:</b> Expresso Princesa dos Campos</span>
+          <span><b>Cliente:</b>Princesa dos Campos</span>
           <span><b>Patrocinador:</b> Diretoria</span>
           <span><b>Owner:</b> {owner}</span>
           <span><b>Início do Projeto:</b> {start.toLocaleDateString('pt-BR')}</span>

@@ -81,7 +81,7 @@ export function LoginScreen() {
         </form>
 
         <div className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest pt-4 border-t">
-          Expresso Princesa dos Campos S.A. &copy; 2026
+          Princesa dos Campos S.A. &copy; 2026
         </div>
       </div>
     </div>
