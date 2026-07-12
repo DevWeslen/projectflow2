@@ -131,9 +131,11 @@ export async function DELETE(request: Request) {
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 })
 
-    await prisma.project.delete({ where: { id } })
+    // Use deleteMany to avoid throwing if the record doesn't exist
+    await prisma.project.deleteMany({ where: { id } })
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch (error: any) {
+    console.error('ERROR DELETING PROJECT:', error)
     return NextResponse.json({ error: 'Failed to delete project' }, { status: 500 })
   }
 }
