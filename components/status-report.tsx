@@ -169,7 +169,7 @@ export function StatusReport({ projectId }: StatusReportProps) {
         <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', opacity: 0.85, marginTop: 2 }}>Projeto {project.name}</div>
       </div>
       <div style={{ background: 'white', borderRadius: 8, padding: '6px 12px', minWidth: 110, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <img src="/cropped-icon.png" alt="Princesa dos Campos" style={{ height: 52, width: 'auto', objectFit: 'contain', display: 'block' }} />
+        <img src="/placeholder-logo.svg" alt="Logo" style={{ height: 52, width: 'auto', objectFit: 'contain', display: 'block' }} />
       </div>
     </div>
   )
@@ -200,7 +200,7 @@ export function StatusReport({ projectId }: StatusReportProps) {
             <h2 className="text-sm sm:text-md font-bold text-green-100 uppercase mt-0.5" title={project.name}>Projeto {project.name}</h2>
           </div>
           <div className="bg-white rounded-lg px-4 py-2 min-w-[120px] flex items-center justify-center">
-            <img src="/cropped-icon.png" alt="Princesa dos Campos" className="h-12 w-auto object-contain" />
+            <img src="/placeholder-logo.svg" alt="Logo" className="h-12 w-auto object-contain" />
           </div>
         </div>
 
@@ -216,7 +216,7 @@ export function StatusReport({ projectId }: StatusReportProps) {
             <Download className="h-3.5 w-3.5" />
             {isExportingPDF ? 'Gerando PDF...' : 'Exportar PDF'}
           </Button>
-          <span><b>Cliente:</b>Princesa dos Campos</span>
+          <span><b>Cliente:</b>—</span>
           <span><b>Patrocinador:</b> Diretoria</span>
           <span><b>Owner:</b> {owner}</span>
           <span><b>Início:</b> {start.toLocaleDateString('pt-BR')}</span>
@@ -360,7 +360,7 @@ export function StatusReport({ projectId }: StatusReportProps) {
 
           {/* Info bar */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 24, padding: '8px 24px', borderBottom: '2.5px solid #006838', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#555' }}>
-            <span><b>Cliente:</b>Princesa dos Campos</span>
+            <span><b>Cliente:</b>—</span>
             <span><b>Patrocinador:</b> Diretoria</span>
             <span><b>Owner:</b> {owner}</span>
             <span><b>Início:</b> {start.toLocaleDateString('pt-BR')}</span>

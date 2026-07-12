@@ -593,7 +593,7 @@ export function ConsolidatedDashboard() {
 
         <div className="pt-10 text-center text-slate-400 text-[10px] font-black uppercase tracking-widest pb-8 flex flex-col gap-2 items-center">
           <LogoPrincesa className="h-5 w-auto" />
-          <span>Gestão Estratégica &bull; Princesa dos Campos 2026</span>
+          <span>Gestão Estratégica &bull; ProjectFlow 2026</span>
         </div>
       </main>
     </div>

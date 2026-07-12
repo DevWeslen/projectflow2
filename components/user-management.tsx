@@ -294,7 +294,7 @@ export function UserManagement() {
           <span className="text-[10px] text-primary font-black uppercase tracking-widest">Protocolo de Segurança Ativo</span>
         </div>
         <p className="text-[9px] text-muted-foreground/40 font-bold uppercase tracking-[0.3em]">
-          Princesa dos Campos · Gestão de Identidade
+          ProjectFlow · Gestão de Identidade
         </p>
       </div>
     </div>

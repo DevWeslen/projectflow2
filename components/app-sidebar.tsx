@@ -56,7 +56,7 @@ export function AppSidebar({ onNewProject }: AppSidebarProps) {
         <LogoPrincesa className="h-12 w-auto" />
         <div className="flex flex-col">
           <span className="font-black text-lg tracking-tight text-sidebar-foreground">ProjectFlow</span>
-          <span className="text-[9px] text-primary uppercase font-bold tracking-widest">Princesa dos Campos</span>
+          <span className="text-[9px] text-primary uppercase font-bold tracking-widest">Sistema de Gestão</span>
         </div>
       </SidebarHeader>
       

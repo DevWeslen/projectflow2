@@ -6,8 +6,8 @@ import './globals.css'
 
 
 export const metadata: Metadata = {
-  title: 'ProjectFlow - Princesa dos Campos',
-  description: 'Sistema de gestão de projetos com metodologias ágeis - Princesa dos Campos',
+  title: 'ProjectFlow',
+  description: 'Sistema de gestão de projetos com metodologias ágeis',
   generator: 'v0.app',
   icons: {
     icon: '/icon.svg',

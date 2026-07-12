@@ -68,7 +68,7 @@ export class ErrorBoundary extends Component<Props, State> {
           </div>
           
           <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-            Suporte Técnico - Princesa dos Campos
+            Suporte Técnico - ProjectFlow
           </p>
         </div>
       )

@@ -14,7 +14,7 @@ export async function GET(request: Request) {
         <p>Olá,</p>
         <p>Este é um e-mail de teste enviado pelo sistema de <strong>Gestão de Projetos</strong> para validar as credenciais e configuração do Nodemailer.</p>
         <hr style="border-color: #166534;" />
-        <p style="font-size: 12px; color: #86efac; text-align: center;">Torre de Controle - Princesa dos Campos</p>
+        <p style="font-size: 12px; color: #86efac; text-align: center;">Torre de Controle - ProjectFlow</p>
       </div>
     `,
   });

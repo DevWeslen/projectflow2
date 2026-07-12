@@ -30,15 +30,15 @@ const transporter = nodemailer.createTransport(smtpConfig);
 
 export const sendEmail = async (payload: EmailPayload) => {
   const fromName = process.env.SMTP_FROM_NAME ?? "Gestão de Projetos";
-  const fromEmail = process.env.SMTP_USER ?? "notificacoes@princesadoscampos.com.br";
+  const fromEmail = process.env.SMTP_USER ?? "notificacoes@projectflow.com.br";
 
   // Verifica a existência do logo para adicionar inline
-  const logoPath = path.join(process.cwd(), "public", "PrincesadosCampos-positivo2-vertical (2).jpg");
+  const logoPath = path.join(process.cwd(), "public", "placeholder-logo.svg");
   let attachments: any[] = [];
   if (fs.existsSync(logoPath)) {
     attachments = [
       {
-        filename: "logo-princesa.jpg",
+        filename: "company-logo.svg",
         path: logoPath,
         cid: "company-logo",
       },
@@ -127,7 +127,7 @@ export const getProjectEmailTemplate = (project: {
               <tr>
                 <td style="font-family:Arial,sans-serif;font-size:20px;font-weight:bold;color:#ffffff;">Torre de Controle</td>
                 <td align="right" width="90" style="width:90px;">
-                  <img src="cid:company-logo" alt="Princesa dos Campos" width="80" height="50" style="display:block;width:80px;height:50px;" />
+                  <img src="cid:company-logo" alt="Logo" width="80" height="50" style="display:block;width:80px;height:50px;" />
                 </td>
               </tr>
             </table>
@@ -195,7 +195,7 @@ export const getProjectEmailTemplate = (project: {
         <tr>
           <td style="background-color:#f9fafb;border-top:1px solid #d1d5db;padding:16px 24px;text-align:center;">
             <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#6b7280;">Este é um e-mail automático enviado pelo sistema Torre de Controle.</p>
-            <p style="margin:4px 0 0;font-family:Arial,sans-serif;font-size:11px;color:#006838;font-weight:bold;">Princesa dos Campos S/A</p>
+            <p style="margin:4px 0 0;font-family:Arial,sans-serif;font-size:11px;color:#006838;font-weight:bold;">ProjectFlow</p>
           </td>
         </tr>
 
@@ -233,7 +233,7 @@ export const getTaskEmailTemplate = (
               <tr>
                 <td style="font-family:Arial,sans-serif;font-size:20px;font-weight:bold;color:#ffffff;">Torre de Controle</td>
                 <td align="right" width="90" style="width:90px;">
-                  <img src="cid:company-logo" alt="Princesa dos Campos" width="80" height="50" style="display:block;width:80px;height:50px;" />
+                  <img src="cid:company-logo" alt="Logo" width="80" height="50" style="display:block;width:80px;height:50px;" />
                 </td>
               </tr>
             </table>
@@ -301,7 +301,7 @@ export const getTaskEmailTemplate = (
         <tr>
           <td style="background-color:#f9fafb;border-top:1px solid #d1d5db;padding:16px 24px;text-align:center;">
             <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#6b7280;">Este é um e-mail automático enviado pelo sistema Torre de Controle.</p>
-            <p style="margin:4px 0 0;font-family:Arial,sans-serif;font-size:11px;color:#006838;font-weight:bold;">Princesa dos Campos S/A</p>
+            <p style="margin:4px 0 0;font-family:Arial,sans-serif;font-size:11px;color:#006838;font-weight:bold;">ProjectFlow</p>
           </td>
         </tr>
 

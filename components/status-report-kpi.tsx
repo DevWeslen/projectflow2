@@ -32,12 +32,12 @@ export function StatusReportKpi({ projectId }: StatusReportKpiProps) {
             <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', opacity: 0.85, marginTop: 2 }}>Projeto {project.name}</div>
           </div>
           <div style={{ background: 'white', borderRadius: 8, padding: '6px 12px', minWidth: 110, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/cropped-icon.png" alt="Princesa dos Campos" style={{ height: 52, width: 'auto', objectFit: 'contain', display: 'block' }} />
+            <img src="/placeholder-logo.svg" alt="Logo" style={{ height: 52, width: 'auto', objectFit: 'contain', display: 'block' }} />
           </div>
         </div>
         {/* INFO BAR */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 24, padding: '6px 16px', borderBottom: '2px solid #006838', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: '#333' }}>
-          <span><b>Cliente:</b>Princesa dos Campos</span>
+          <span><b>Cliente:</b>—</span>
           <span><b>Patrocinador:</b> Diretoria</span>
           <span><b>Owner:</b> {owner}</span>
           <span><b>Início do Projeto:</b> {start.toLocaleDateString('pt-BR')}</span>
