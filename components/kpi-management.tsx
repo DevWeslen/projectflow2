@@ -44,7 +44,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
 
   // ── General KPI editing ────────────────────────────────────
   const [editingGeneral, setEditingGeneral] = useState<EditingKpi | null>(null)
-  
+
   // ── Year Deletion ──────────────────────────────────────────
   const [deleteYearConfirm, setDeleteYearConfirm] = useState<string | null>(null)
 
@@ -147,19 +147,19 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
 
     const baseKpi = kpis.find(k => k.id === kpiId)
     const kpiIndex = kpisList.findIndex(k => k.id === kpiId)
-    
+
     if (kpiIndex >= 0) {
       const currentKpi = kpisList[kpiIndex]
       let newMonthly = currentKpi.monthly
-      
+
       // Auto-distribute the new target across the months if target changed
       if (type === 'target' && baseKpi) {
-        const isFraction = baseKpi.distribution === 'fraction' || (!baseKpi.distribution && baseKpi.aggregation === 'sum'); 
+        const isFraction = baseKpi.distribution === 'fraction' || (!baseKpi.distribution && baseKpi.aggregation === 'sum');
         const perMonth = isFraction ? Math.round((value / 12) * 100) / 100 : value
         if (newMonthly) {
           newMonthly = newMonthly.map(m => ({ ...m, target: perMonth }))
         } else {
-          newMonthly = Array.from({length: 12}).map((_, i) => ({
+          newMonthly = Array.from({ length: 12 }).map((_, i) => ({
             monthIndex: i,
             current: 0,
             target: perMonth
@@ -171,7 +171,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
       if (baseKpi) {
         const isFraction = baseKpi.distribution === 'fraction' || (!baseKpi.distribution && baseKpi.aggregation === 'sum');
         const perMonth = isFraction ? Math.round((value / 12) * 100) / 100 : value
-        const newMonthly = Array.from({length: 12}).map((_, i) => ({
+        const newMonthly = Array.from({ length: 12 }).map((_, i) => ({
           monthIndex: i,
           current: 0,
           target: type === 'target' ? perMonth : 0
@@ -203,7 +203,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
   const handleOpenMonthly = (yIdx: number, baseKpi: KPI, yKpi: KPI) => {
     const isFraction = baseKpi.distribution === 'fraction' || (!baseKpi.distribution && baseKpi.aggregation === 'sum');
     const perMonth = isFraction ? Math.round((yKpi.target / 12) * 100) / 100 : yKpi.target
-    const defaultMonthly = Array.from({length: 12}).map((_, i) => ({
+    const defaultMonthly = Array.from({ length: 12 }).map((_, i) => ({
       monthIndex: i,
       current: 0,
       target: perMonth
@@ -229,11 +229,11 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
         validMonths++
       }
     })
-    
-    let newYearCurrent = data.aggregation === 'sum' 
-      ? totalCurrent 
+
+    let newYearCurrent = data.aggregation === 'sum'
+      ? totalCurrent
       : (validMonths > 0 ? totalCurrent / validMonths : 0)
-    
+
     newYearCurrent = Math.round(newYearCurrent * 100) / 100
 
     // Também reconcilia a META (Target) a partir das entradas mensais
@@ -263,7 +263,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
         })
       }
     })
-    
+
     const updatedGeneralKpis = kpis.map(k => {
       if (k.id !== data.kpiId) return k
       let newCurrent = 0, newTarget = 0, validYears = 0
@@ -321,11 +321,11 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
 
     const remainingGoals = yearlyGoals.filter(yg => yg.id !== yearId)
     const newNumYears = remainingGoals.length
-    
+
     // Redistribute fraction targets across remaining years if user chose YES
     const updatedGoals = remainingGoals.map(yg => {
       if (!redistribute) return yg
-      
+
       return {
         ...yg,
         kpis: yg.kpis.map(yKpi => {
@@ -339,7 +339,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
         })
       }
     })
-    
+
     // Update general KPIs based on the new yearly totals
     const updatedGeneralKpis = kpis.map(k => {
       let newCurrent = 0, newTarget = 0, validYears = 0
@@ -352,7 +352,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
       }
       return { ...k, current: newCurrent, target: newTarget }
     })
-    
+
     updateProject(projectId, { yearlyGoals: updatedGoals, generalKpis: updatedGeneralKpis })
     setDeleteYearConfirm(null)
   }
@@ -447,7 +447,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                 </label>
               </div>
             </div>
-            
+
             {newKpiName && newKpiTarget && numYears > 1 && (
               <div className="bg-slate-50 rounded-xl p-4 border flex items-start gap-3 mt-4">
                 <div className="bg-blue-100 text-blue-700 p-1.5 rounded-md mt-0.5"><TrendingUp className="w-4 h-4" /></div>
@@ -458,15 +458,15 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                       ? `Meta total dividida pelos ${numYears} anos de projeto: Aprox. `
                       : `A mesma meta se aplica a todos os ${numYears} anos: Exatamente `}
                     <strong className="text-slate-900 bg-white px-2 py-0.5 rounded border ml-1 shadow-sm">
-                      {newKpiDistribution === 'fraction' 
-                        ? `${newKpiUnit} ${(Number(newKpiTarget) / numYears).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}` 
+                      {newKpiDistribution === 'fraction'
+                        ? `${newKpiUnit} ${(Number(newKpiTarget) / numYears).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}`
                         : `${newKpiUnit} ${Number(newKpiTarget).toLocaleString()}`} por ano
                     </strong>
                   </p>
                 </div>
               </div>
             )}
-            
+
             <div className="flex gap-3 justify-end pt-2">
               <Button variant="ghost" onClick={() => setShowKpiForm(false)} className="rounded-xl font-bold">Cancelar</Button>
               <Button onClick={handleAddKpi} disabled={!newKpiName.trim() || !newKpiTarget} className="bg-slate-900 text-white hover:bg-slate-800 rounded-xl font-bold px-8">
@@ -479,17 +479,17 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
 
       {kpis.length > 0 ? (
         <div className="space-y-10">
-          
+
           {/* VIBRANT CONSOLIDATED CARDS */}
           <div>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
               <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
                 <Target className="w-5 h-5 text-slate-400" /> Resultados Globais Consolidados
               </h3>
-              
+
               <div className="flex items-center gap-2 bg-white border rounded-xl px-3 py-1.5 shadow-sm">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Filtrar por:</span>
-                <select 
+                <select
                   className="bg-transparent text-sm font-black text-[#006838] outline-none cursor-pointer"
                   value={selectedYear}
                   onChange={e => setSelectedYear(e.target.value)}
@@ -511,7 +511,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                     if (yearKpi) kpi = yearKpi
                   }
                 }
-                
+
                 const percent = kpi.target > 0 ? Math.min((kpi.current / kpi.target) * 100, 100) : 0
                 const isEditing = editingGeneral?.id === generalKpi.id
                 const bgGradient = cardColors[idx % cardColors.length]
@@ -523,46 +523,74 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                   return (
                     <Card key={generalKpi.id} className="border-2 border-slate-900 shadow-xl rounded-2xl overflow-hidden bg-white col-span-1 md:col-span-2">
                       <div className="bg-slate-900 px-4 py-3 text-white flex justify-between items-center">
-                        <span className="font-bold text-sm flex items-center gap-2"><Edit2 className="w-4 h-4"/> Editando Total</span>
-                        <button onClick={() => setEditingGeneral(null)} className="hover:bg-white/20 p-1 rounded-md transition-colors"><X className="w-4 h-4"/></button>
+                        <span className="font-bold text-sm flex items-center gap-2"><Edit2 className="w-4 h-4" /> Editando Total</span>
+                        <button onClick={() => setEditingGeneral(null)} className="hover:bg-white/20 p-1 rounded-md transition-colors"><X className="w-4 h-4" /></button>
                       </div>
                       <CardContent className="p-5 space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-1.5 hover:bg-slate-50 p-2 rounded-lg transition-colors border border-transparent hover:border-slate-100">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="space-y-1.5">
                             <label className="text-[10px] font-bold text-slate-500 uppercase">Nome</label>
-                            <Input value={editingGeneral.name} onChange={e => setEditingGeneral({ ...editingGeneral, name: e.target.value })} className="h-9 font-bold" />
+                            <Input value={editingGeneral.name} onChange={e => setEditingGeneral({ ...editingGeneral, name: e.target.value })} className="h-10 font-bold" />
                           </div>
                           <div className="space-y-1.5">
                             <label className="text-[10px] font-bold text-slate-500 uppercase">Meta Global</label>
-                            <Input type="number" value={editingGeneral.target} onChange={e => setEditingGeneral({ ...editingGeneral, target: e.target.value })} className="h-9 font-bold" />
+                            <Input type="number" value={editingGeneral.target} onChange={e => setEditingGeneral({ ...editingGeneral, target: e.target.value })} className="h-10 font-bold" />
                           </div>
                           <div className="space-y-1.5">
                             <label className="text-[10px] font-bold text-slate-500 uppercase">Apresentação</label>
-                            <Input value={editingGeneral.unit} onChange={e => setEditingGeneral({ ...editingGeneral, unit: e.target.value })} className="h-9" placeholder="R$, %, Qtde..." />
+                            <Input value={editingGeneral.unit} onChange={e => setEditingGeneral({ ...editingGeneral, unit: e.target.value })} className="h-10" placeholder="R$, %, Qtde..." />
                           </div>
-                          <div className="space-y-1.5 col-span-2">
+                          <div className="space-y-1.5 col-span-3">
                             <label className="text-[10px] font-bold text-slate-500 uppercase">Cálculo no Painel Consolidado</label>
-                            <div className="flex gap-1">
-                              {(['sum', 'average'] as const).map(m => (
-                                <button key={m} onClick={() => setEditingGeneral({ ...editingGeneral, aggregation: m })}
-                                  className={`flex-1 h-9 rounded-md text-[10px] font-black transition-all ${editingGeneral.aggregation === m ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                                  {m === 'sum' ? '∑ Anual Geral' : '⌀ Mensal Geral'}
-                                </button>
-                              ))}
+                            <div className="flex gap-2">
+                              {(['sum', 'average'] as const).map(m => {
+                                const tooltip = m === 'sum'
+                                  ? 'Anual Geral (∑): soma todos os valores realizados de todos os anos para exibir o total acumulado no painel.'
+                                  : 'Mensal Geral (⌀): calcula a média dos valores entre os anos, ideal para indicadores como % ou taxa.'
+                                return (
+                                  <div key={m} className="flex-1 relative group/tip">
+                                    <button onClick={() => setEditingGeneral({ ...editingGeneral, aggregation: m })}
+                                      className={`w-full h-10 rounded-lg text-[11px] font-black transition-all border-2 ${editingGeneral.aggregation === m
+                                        ? 'bg-slate-900 text-white border-slate-900'
+                                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200 border-slate-100'
+                                        }`}>
+                                      {m === 'sum' ? '∑ Anual Geral' : '⌀ Mensal Geral'}
+                                    </button>
+                                    <div className="absolute z-50 bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 px-3 py-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl opacity-0 group-hover/tip:opacity-100 transition-opacity pointer-events-none">
+                                      {tooltip}
+                                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900" />
+                                    </div>
+                                  </div>
+                                )
+                              })}
                             </div>
                           </div>
-                          <div className="space-y-1.5 col-span-2">
+                          <div className="space-y-1.5 col-span-3">
                             <label className="text-[10px] font-bold text-slate-500 uppercase">Distribuição da Meta Anual</label>
-                            <div className="flex gap-1">
-                              {(['fraction', 'global'] as const).map(d => (
-                                <button key={d} onClick={() => setEditingGeneral({ ...editingGeneral, distribution: d })}
-                                  className={`flex-1 h-9 rounded-md text-[10px] font-black transition-all ${editingGeneral.distribution === d ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                                  {d === 'fraction' ? '÷ Fração (Dividir)' : '∞ Global (Repetir)'}
-                                </button>
-                              ))}
+                            <div className="flex gap-2">
+                              {(['fraction', 'global'] as const).map(d => {
+                                const tooltip = d === 'fraction'
+                                  ? 'Fração (Dividir): a meta total é dividida igualmente entre os anos. Ex: meta de 100 em 4 anos = 25 por ano.'
+                                  : 'Global (Repetir): a mesma meta se aplica a cada ano independentemente. Ex: meta de 100 em 4 anos = 100 por ano.'
+                                return (
+                                  <div key={d} className="flex-1 relative group/tip">
+                                    <button onClick={() => setEditingGeneral({ ...editingGeneral, distribution: d })}
+                                      className={`w-full h-10 rounded-lg text-[11px] font-black transition-all border-2 ${editingGeneral.distribution === d
+                                        ? 'bg-slate-900 text-white border-slate-900'
+                                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200 border-slate-100'
+                                        }`}>
+                                      {d === 'fraction' ? '÷ Fração (Dividir)' : '∞ Global (Repetir)'}
+                                    </button>
+                                    <div className="absolute z-50 bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 px-3 py-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl opacity-0 group-hover/tip:opacity-100 transition-opacity pointer-events-none">
+                                      {tooltip}
+                                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900" />
+                                    </div>
+                                  </div>
+                                )
+                              })}
                             </div>
                           </div>
-                          <div className="col-span-2 flex items-center gap-2 p-2 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors">
+                          <div className="col-span-3 flex items-center gap-2 p-2 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors">
                             <Checkbox
                               id={`editFinancial-${editingGeneral.id}`}
                               checked={editingGeneral.includeInFinancialProgress}
@@ -576,7 +604,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                         <div className="flex gap-2 justify-end pt-2 border-t">
                           <Button size="sm" onClick={handleSaveGeneralKpi} className="bg-slate-900 hover:bg-slate-800 text-white">Salvar</Button>
                           <Button size="sm" variant="outline" onClick={() => { handleSaveGeneralKpi(); handleRedistribute(generalKpi.id) }} className="gap-1 border-slate-300 font-bold">
-                            <RefreshCw className="h-4 w-4" /> Salvar e Rebalancear 
+                            <RefreshCw className="h-4 w-4" /> Salvar e Rebalancear
                           </Button>
                         </div>
                       </CardContent>
@@ -591,7 +619,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                     <div className={`absolute inset-0 bg-gradient-to-br ${bgGradient} opacity-95`} />
                     <div className="absolute inset-0 bg-black/10 mix-blend-overlay" />
                     <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]" />
-                    
+
                     <div className="relative p-5 text-white h-full flex flex-col justify-between min-h-[180px]">
                       {/* Top section */}
                       <div className="flex justify-between items-start mb-4">
@@ -601,7 +629,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                             {kpi.aggregation === 'sum' ? 'Consolidado Anual' : 'Acompanhamento Mensal'}
                           </span>
                         </div>
-                        
+
                         {/* Action buttons (fade in on hover) */}
                         <div className="absolute top-4 right-4 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 backdrop-blur-md rounded-xl p-1 border border-white/10 shadow-2xl">
                           <button onClick={() => setEditingGeneral({ id: generalKpi.id, name: generalKpi.name, target: generalKpi.target.toString(), unit: generalKpi.unit, aggregation: generalKpi.aggregation, distribution: generalKpi.distribution || (generalKpi.aggregation === 'sum' ? 'fraction' : 'global'), includeInFinancialProgress: generalKpi.includeInFinancialProgress !== false })} className="p-1.5 hover:bg-white/20 rounded-lg text-white/90 hover:text-white transition-colors" title="Editar">
@@ -626,10 +654,10 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                             / {kpi.target.toLocaleString('pt-BR')} {kpi.unit}
                           </span>
                         </div>
-                        
+
                         {/* Thick Progress bar container */}
                         <div className="w-full bg-black/20 rounded-full h-3.5 p-0.5 backdrop-blur-sm overflow-hidden flex shadow-inner">
-                          <div 
+                          <div
                             className={`h-full rounded-full transition-all duration-1000 ${isSuccess ? 'bg-white shadow-[0_0_10px_rgba(255,255,255,0.7)]' : isWarning ? 'bg-amber-300' : 'bg-white/90'}`}
                             style={{ width: `${Math.max(2, percent)}%` }}
                           />
@@ -655,7 +683,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                 <Calendar className="w-5 h-5 text-slate-400" /> Detalhamento Anual
               </h3>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {yearlyGoals.map((yearGoal, yIdx) => (
                 <Card key={yearGoal.id} className="border-none shadow-lg rounded-2xl overflow-hidden bg-white ring-1 ring-slate-100">
@@ -663,7 +691,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                     <div>
                       <h4 className="text-xl font-black text-slate-900">{yearGoal.year}</h4>
                       <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                         {fmtDate(yearGoal.startDate)} → {fmtDate(yearGoal.endDate)}
+                        {fmtDate(yearGoal.startDate)} → {fmtDate(yearGoal.endDate)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -673,10 +701,10 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                       </button>
                     </div>
                   </div>
-                  
+
                   <CardContent className="p-0">
                     {kpis.length === 0 && <div className="p-8 text-center text-sm text-slate-400">Sem indicadores.</div>}
-                    
+
                     {/* List of KPIs in this year */}
                     <div className="divide-y divide-slate-100">
                       {kpis.map((baseKpi, kpiIdx) => {
@@ -684,7 +712,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                         const isEditCurrent = editingYearIndex === yIdx && editingKpiId === baseKpi.id && editType === 'current'
                         const isEditTarget = editingYearIndex === yIdx && editingKpiId === baseKpi.id && editType === 'target'
                         const pct = yKpi.target > 0 ? Math.min((yKpi.current / yKpi.target) * 100, 100) : 0
-                        
+
                         // Pick color from the same pool to tie it visually
                         const dotColor = cardColors[kpiIdx % cardColors.length].split(' ')[0].replace('from-', 'bg-')
 
@@ -694,7 +722,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                               <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${dotColor}`} />
                               <p className="text-xs font-bold text-slate-700 uppercase tracking-widest">{baseKpi.name}</p>
                             </div>
-                            
+
                             <div className="flex flex-wrap items-stretch items-center gap-2 sm:gap-3">
                               {/* Realizado */}
                               <div className="flex-1 min-w-[110px] bg-white border border-slate-200 rounded-xl p-2 pb-1.5 group/edit relative cursor-pointer hover:border-slate-300 transition-colors shadow-sm"
@@ -714,7 +742,7 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                                   </div>
                                 )}
                               </div>
-                              
+
                               {/* Meta */}
                               <div className="flex-1 min-w-[110px] bg-slate-50 border border-slate-200 rounded-xl p-2 pb-1.5 group/edit relative cursor-pointer hover:border-slate-300 transition-colors"
                                 onClick={() => !isEditTarget && startEditing(yIdx, yKpi, 'target')}>
@@ -735,9 +763,9 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
                                 )}
                               </div>
 
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 className="h-full min-h-[50px] border-slate-200 text-slate-500 hover:text-[#006838] hover:border-[#006838]/30 hover:bg-[#006838]/5 font-bold gap-1.5 flex-col justify-center px-4 shadow-sm"
                                 onClick={() => handleOpenMonthly(yIdx, baseKpi, yKpi)}
                                 title="Gráficos e Detalhamento Mensal"
@@ -788,10 +816,10 @@ export function KpiManagement({ projectId }: KpiManagementProps) {
         </Card>
       )}
 
-      <MonthlyKpiDialog 
-        editingMonthly={editingMonthly} 
-        setEditingMonthly={setEditingMonthly} 
-        onSave={handleSaveMonthly} 
+      <MonthlyKpiDialog
+        editingMonthly={editingMonthly}
+        setEditingMonthly={setEditingMonthly}
+        onSave={handleSaveMonthly}
       />
 
       {/* Pop-up estilizado para Exclusão de Ano */}
