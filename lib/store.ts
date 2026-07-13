@@ -108,6 +108,7 @@ export const useProjectStore = create<ProjectStore>()(
       },
 
       users: [
+        { id: 'system', name: 'Sistema', username: 'system', role: 'admin' },
         { id: '1', name: 'Admin TI', username: 'admin', role: 'admin' },
         { id: '2', name: 'Diretoria Princesa', username: 'diretor', role: 'conselho' },
         { id: '3', name: 'Gerente Operacional', username: 'gerente', role: 'gerencia' },
