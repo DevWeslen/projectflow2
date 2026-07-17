@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { TASK_STATUS_INFO, METHODOLOGY_INFO, autoStatusFromProgress, type Task, type TaskStatus, type Methodology } from '@/lib/types'
+import { getAllExternalStakeholders, normalizeStakeholderEmail, parseExternalStakeholders } from '@/lib/stakeholders'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import {
@@ -69,23 +70,18 @@ export function TaskFormDialog({
   const [pendingTaskData, setPendingTaskData] = useState<any>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const { addTask, updateTask, tasks, users, projects, user: currentUser } = useProjectStore()
+  const { addTask, updateTask, updateProject, tasks, users, projects, user: currentUser } = useProjectStore()
 
-  // Get project's external stakeholders to show as selectable options
   const currentProject = projects.find(p => p.id === projectId)
-  const rawExtStakeholders = currentProject?.externalStakeholders
-  const projectExternalStakeholders: any[] = Array.isArray(rawExtStakeholders)
-    ? rawExtStakeholders
-    : typeof rawExtStakeholders === 'string'
-      ? (() => { try { return JSON.parse(rawExtStakeholders) } catch { return [] } })()
-      : []
+  const projectExternalStakeholders = parseExternalStakeholders(currentProject?.externalStakeholders)
+  const selectableExternalStakeholders = getAllExternalStakeholders(projects, tasks, { projectId })
 
   // Sorted + filtered stakeholders
   const sortedUsers = [...users].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
   const filteredTaskStakeholders = sortedUsers.filter(u =>
     u.name.toLowerCase().includes(stakeholderSearch.toLowerCase())
   )
-  const filteredProjectExtStakeholders = projectExternalStakeholders.filter((es: any) =>
+  const filteredProjectExtStakeholders = selectableExternalStakeholders.filter((es) =>
     es.name.toLowerCase().includes(stakeholderSearch.toLowerCase()) ||
     es.email.toLowerCase().includes(stakeholderSearch.toLowerCase())
   )
@@ -122,7 +118,7 @@ export function TaskFormDialog({
 
       setStakeholderIds(safeArray(editTask.stakeholderIds))
       setExternalStakeholderNames(safeArray(editTask.externalStakeholderNames))
-      setExternalStakeholders(editTask.externalStakeholders || [])
+      setExternalStakeholders(parseExternalStakeholders(editTask.externalStakeholders).map(es => ({ name: es.name, email: es.email })))
       setAttachments(safeArray(editTask.attachments))
     } else {
       setTitle('')
@@ -176,14 +172,31 @@ export function TaskFormDialog({
     finalizeSave(taskData)
   }
 
+  const promoteExternalStakeholdersToProject = async () => {
+    const existingEmails = new Set(projectExternalStakeholders.map(es => normalizeStakeholderEmail(es.email)))
+    const newForProject = externalStakeholders.filter(
+      es => !existingEmails.has(normalizeStakeholderEmail(es.email))
+    )
+
+    if (newForProject.length === 0) return true
+
+    return updateProject(projectId, {
+      externalStakeholders: [
+        ...projectExternalStakeholders,
+        ...newForProject.map(e => ({ id: generateId(), name: e.name, email: e.email }))
+      ]
+    })
+  }
+
   const finalizeSave = async (taskData: any) => {
     setIsSubmitting(true)
     try {
+      let success = false
+
       if (editTask) {
-        const success = await updateTask(editTask.id, taskData)
+        success = await updateTask(editTask.id, taskData)
         if (success) {
           toast.success('Tarefa atualizada com sucesso!')
-          onOpenChange(false)
         } else {
           toast.error('Erro ao atualizar tarefa no servidor. Verifique sua conexão.')
         }
@@ -193,12 +206,23 @@ export function TaskFormDialog({
           parentId,
           projectId
         })
-        if (id) {
+        success = !!id
+        if (success) {
           toast.success('Tarefa criada com sucesso!')
-          onOpenChange(false)
         } else {
           toast.error('Erro ao criar tarefa no servidor. Verifique sua conexão.')
         }
+      }
+
+      if (success && externalStakeholders.length > 0) {
+        const promoted = await promoteExternalStakeholdersToProject()
+        if (!promoted) {
+          toast.warning('Tarefa salva, mas não foi possível reutilizar os stakeholders externos em outras atividades.')
+        }
+      }
+
+      if (success) {
+        onOpenChange(false)
       }
     } catch (err) {
       toast.error('Ocorreu um erro inesperado ao salvar a tarefa.')

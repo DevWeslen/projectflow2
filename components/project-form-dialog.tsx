@@ -17,6 +17,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
+import { getAllExternalStakeholders, normalizeStakeholderEmail } from '@/lib/stakeholders'
 import { Check, Plus, Trash2, Search } from 'lucide-react'
 import {
   Tooltip,
@@ -33,7 +34,7 @@ interface ProjectFormDialogProps {
 }
 
 export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps) {
-  const { addProject, users, user: currentUser } = useProjectStore()
+  const { addProject, users, projects, tasks, user: currentUser } = useProjectStore()
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -84,6 +85,18 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
     .filter(u => u.name.toLowerCase().includes(memberSearch.toLowerCase()))
   const filteredStakeholders = sortedUsers
     .filter(u => u.name.toLowerCase().includes(stakeholderSearch.toLowerCase()))
+
+  const knownExternalStakeholders = getAllExternalStakeholders(projects, tasks)
+  const filteredKnownExternalStakeholders = knownExternalStakeholders.filter(es =>
+    es.name.toLowerCase().includes(stakeholderSearch.toLowerCase()) ||
+    es.email.toLowerCase().includes(stakeholderSearch.toLowerCase())
+  )
+
+  const manuallyAddedExternalStakeholders = externalStakeholders.filter(es =>
+    !knownExternalStakeholders.some(
+      known => normalizeStakeholderEmail(known.email) === normalizeStakeholderEmail(es.email)
+    )
+  )
 
   const handleAddAttachment = () => {
     if (!newAttachmentName.trim() || !newAttachmentUrl.trim()) return
@@ -431,20 +444,53 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
                     {stakeholderIds.includes(u.id) && <Check className="h-3 w-3" />}
                   </button>
                 ))}
-                {filteredStakeholders.length === 0 && (
-                  <p className="text-[10px] text-muted-foreground p-1">Nenhum resultado.</p>
-                )}
-                {externalStakeholders.map((es, idx) => (
+
+                {filteredKnownExternalStakeholders.map((es) => {
+                  const isSelected = externalStakeholders.some(
+                    s => normalizeStakeholderEmail(s.email) === normalizeStakeholderEmail(es.email)
+                  )
+                  return (
+                    <button
+                      key={es.id || es.email}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          setExternalStakeholders(prev =>
+                            prev.filter(s => normalizeStakeholderEmail(s.email) !== normalizeStakeholderEmail(es.email))
+                          )
+                        } else {
+                          setExternalStakeholders(prev => [...prev, { name: es.name, email: es.email }])
+                        }
+                      }}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all border",
+                        isSelected
+                          ? "bg-[#006838] text-white border-[#006838] shadow-sm"
+                          : "bg-background/50 border-border/50 text-muted-foreground hover:border-[#006838]/50"
+                      )}
+                    >
+                      <span>{es.name}</span>
+                      <span className={cn("text-[9px] font-normal opacity-70", isSelected && "opacity-90")}>{es.email}</span>
+                      {isSelected && <Check className="h-3 w-3" />}
+                    </button>
+                  )
+                })}
+
+                {manuallyAddedExternalStakeholders.map((es, idx) => (
                   <div key={`ext-${idx}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all border bg-primary/10 border-primary/30 text-primary-foreground">
                     <div className="flex flex-col">
                       <span>{es.name}</span>
                       <span className="text-[9px] opacity-70 font-normal">{es.email}</span>
                     </div>
-                    <button type="button" onClick={() => setExternalStakeholders(prev => prev.filter((_, i) => i !== idx))} className="hover:text-destructive ml-1">
+                    <button type="button" onClick={() => setExternalStakeholders(prev => prev.filter(s => normalizeStakeholderEmail(s.email) !== normalizeStakeholderEmail(es.email)))} className="hover:text-destructive ml-1">
                       <Trash2 className="h-3 w-3" />
                     </button>
                   </div>
                 ))}
+
+                {filteredStakeholders.length === 0 && filteredKnownExternalStakeholders.length === 0 && manuallyAddedExternalStakeholders.length === 0 && (
+                  <p className="text-[10px] text-muted-foreground p-1">Nenhum stakeholder cadastrado ainda. Adicione um externo abaixo.</p>
+                )}
               </div>
               <div className="flex flex-col sm:flex-row gap-2 mt-2">
                 <Input

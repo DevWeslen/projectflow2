@@ -38,6 +38,8 @@ export async function GET() {
         ...p,
         memberIds: safeParse(p.memberIds, []),
         stakeholderIds: safeParse(p.stakeholderIds, []),
+        externalStakeholders: safeParse(p.externalStakeholders, []),
+        externalStakeholderNames: safeParse(p.externalStakeholderNames, []),
         attachments: safeParse(p.attachments, []),
         generalKpis: safeParse(p.generalKpis, []),
         yearlyGoals: safeParse(p.yearlyGoals, [])
@@ -45,6 +47,7 @@ export async function GET() {
       tasks: tasks.map(t => ({
         ...t,
         stakeholderIds: safeParse(t.stakeholderIds, []),
+        externalStakeholders: safeParse(t.externalStakeholders, []),
         externalStakeholderNames: safeParse(t.externalStakeholderNames, []),
         attachments: safeParse(t.attachments, [])
       })),
