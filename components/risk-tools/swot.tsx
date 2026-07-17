@@ -34,42 +34,6 @@ export function SwotAnalysis({ data, onUpdate }: SwotAnalysisProps) {
     onUpdate({ ...data, [category]: newCategory })
   }
 
-  const Quadrant = ({ title, category, icon: Icon, colorClass, placeholder, roundedClass }: any) => (
-    <Card className={cn("glass-card border-none overflow-hidden group h-full flex flex-col shadow-2xl", roundedClass)}>
-      <div className={cn("p-4 flex items-center gap-3 border-b border-white/5", colorClass)}>
-        <Icon className="h-5 w-5" />
-        <h3 className="font-black uppercase tracking-widest text-sm">{title}</h3>
-      </div>
-      <CardContent className="p-4 space-y-3 flex-1 bg-background/20">
-        {data[category as keyof typeof data].map((item: string, index: number) => (
-          <div key={index} className="flex gap-2 animate-in-slide-up group/item">
-            <Input
-              value={item}
-              onChange={(e) => updateItem(category, index, e.target.value)}
-              placeholder={placeholder}
-              className="bg-background/20 border-none focus:ring-1 ring-primary/30 h-9 text-xs font-medium"
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => removeItem(category, index)}
-              className="h-9 w-9 text-muted-foreground hover:text-destructive shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
-        <Button
-          variant="ghost"
-          className="w-full border-dashed border-2 border-primary/10 hover:border-primary/30 hover:bg-primary/5 text-muted-foreground hover:text-primary transition-all text-[10px] font-black uppercase tracking-widest h-9"
-          onClick={() => addItem(category)}
-        >
-          <Plus className="h-3 w-3 mr-2" />
-          Adicionar
-        </Button>
-      </CardContent>
-    </Card>
-  )
 
   return (
     <div className="relative animate-in-fade max-w-5xl mx-auto py-8">
@@ -91,6 +55,10 @@ export function SwotAnalysis({ data, onUpdate }: SwotAnalysisProps) {
           colorClass="bg-green-500/10 text-green-500"
           placeholder="Vantagem competitiva..."
           roundedClass="md:rounded-br-none"
+          data={data}
+          addItem={addItem}
+          updateItem={updateItem}
+          removeItem={removeItem}
         />
         <Quadrant 
           title="Fraquezas" 
@@ -99,6 +67,10 @@ export function SwotAnalysis({ data, onUpdate }: SwotAnalysisProps) {
           colorClass="bg-red-500/10 text-red-500"
           placeholder="Gargalos internos..."
           roundedClass="md:rounded-bl-none"
+          data={data}
+          addItem={addItem}
+          updateItem={updateItem}
+          removeItem={removeItem}
         />
         <Quadrant 
           title="Oportunidades" 
@@ -107,6 +79,10 @@ export function SwotAnalysis({ data, onUpdate }: SwotAnalysisProps) {
           colorClass="bg-blue-500/10 text-blue-500"
           placeholder="Mercado, tendências..."
           roundedClass="md:rounded-tr-none"
+          data={data}
+          addItem={addItem}
+          updateItem={updateItem}
+          removeItem={removeItem}
         />
         <Quadrant 
           title="Ameaças" 
@@ -115,8 +91,49 @@ export function SwotAnalysis({ data, onUpdate }: SwotAnalysisProps) {
           colorClass="bg-orange-500/10 text-orange-500"
           placeholder="Concorrência..."
           roundedClass="md:rounded-tl-none"
+          data={data}
+          addItem={addItem}
+          updateItem={updateItem}
+          removeItem={removeItem}
         />
       </div>
     </div>
   )
 }
+
+const Quadrant = ({ title, category, icon: Icon, colorClass, placeholder, roundedClass, data, addItem, updateItem, removeItem }: any) => (
+  <Card className={cn("glass-card border-none overflow-hidden group h-full flex flex-col shadow-2xl", roundedClass)}>
+    <div className={cn("p-4 flex items-center gap-3 border-b border-white/5", colorClass)}>
+      <Icon className="h-5 w-5" />
+      <h3 className="font-black uppercase tracking-widest text-sm">{title}</h3>
+    </div>
+    <CardContent className="p-4 space-y-3 flex-1 bg-background/20">
+      {data[category as keyof typeof data].map((item: string, index: number) => (
+        <div key={index} className="flex gap-2 animate-in-slide-up group/item">
+          <Input
+            value={item}
+            onChange={(e) => updateItem(category, index, e.target.value)}
+            placeholder={placeholder}
+            className="bg-background/20 border-none focus:ring-1 ring-primary/30 h-9 text-xs font-medium"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => removeItem(category, index)}
+            className="h-9 w-9 text-muted-foreground hover:text-destructive shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ))}
+      <Button
+        variant="ghost"
+        className="w-full border-dashed border-2 border-primary/10 hover:border-primary/30 hover:bg-primary/5 text-muted-foreground hover:text-primary transition-all text-[10px] font-black uppercase tracking-widest h-9"
+        onClick={() => addItem(category)}
+      >
+        <Plus className="h-3 w-3 mr-2" />
+        Adicionar
+      </Button>
+    </CardContent>
+  </Card>
+)
