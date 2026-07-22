@@ -29,7 +29,7 @@ if (process.env.SMTP_USER && process.env.SMTP_PASS) {
 const transporter = nodemailer.createTransport(smtpConfig);
 
 export const sendEmail = async (payload: EmailPayload) => {
-  const fromName = process.env.SMTP_FROM_NAME ?? "Gestão de Projetos";
+  const fromName = process.env.SMTP_FROM_NAME ?? "Project Flow";
   const fromEmail = process.env.SMTP_USER ?? "notificacoes@projectflow.com.br";
 
   // Verifica a existência do logo para adicionar inline
@@ -125,7 +125,7 @@ export const getProjectEmailTemplate = (project: {
           <td style="background-color:#006838;padding:20px 24px;">
             <table width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
-                <td style="font-family:Arial,sans-serif;font-size:20px;font-weight:bold;color:#ffffff;">Torre de Controle</td>
+                <td style="font-family:Arial,sans-serif;font-size:20px;font-weight:bold;color:#ffffff;">Project Flow</td>
                 <td align="right" width="90" style="width:90px;">
                   <img src="cid:company-logo" alt="Logo" width="80" height="50" style="display:block;width:80px;height:50px;" />
                 </td>
@@ -146,7 +146,7 @@ export const getProjectEmailTemplate = (project: {
         <tr>
           <td style="padding:20px 24px;">
             <p style="margin:0;font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#374151;">
-              Olá, você foi vinculado a um novo projeto na plataforma de <strong>Gestão de Projetos (Torre de Controle)</strong>. Confira os detalhes abaixo:
+              Olá, você foi vinculado a um novo projeto na plataforma <strong>Project Flow</strong>. Confira os detalhes abaixo:
             </p>
           </td>
         </tr>
@@ -194,7 +194,7 @@ export const getProjectEmailTemplate = (project: {
         <!-- FOOTER -->
         <tr>
           <td style="background-color:#f9fafb;border-top:1px solid #d1d5db;padding:16px 24px;text-align:center;">
-            <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#6b7280;">Este é um e-mail automático enviado pelo sistema Torre de Controle.</p>
+            <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#6b7280;">Este é um e-mail automático enviado pelo sistema Project Flow.</p>
             <p style="margin:4px 0 0;font-family:Arial,sans-serif;font-size:11px;color:#006838;font-weight:bold;">ProjectFlow</p>
           </td>
         </tr>
@@ -231,7 +231,7 @@ export const getTaskEmailTemplate = (
           <td style="background-color:#006838;padding:20px 24px;">
             <table width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
-                <td style="font-family:Arial,sans-serif;font-size:20px;font-weight:bold;color:#ffffff;">Torre de Controle</td>
+                <td style="font-family:Arial,sans-serif;font-size:20px;font-weight:bold;color:#ffffff;">Project Flow</td>
                 <td align="right" width="90" style="width:90px;">
                   <img src="cid:company-logo" alt="Logo" width="80" height="50" style="display:block;width:80px;height:50px;" />
                 </td>
@@ -300,7 +300,7 @@ export const getTaskEmailTemplate = (
         <!-- FOOTER -->
         <tr>
           <td style="background-color:#f9fafb;border-top:1px solid #d1d5db;padding:16px 24px;text-align:center;">
-            <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#6b7280;">Este é um e-mail automático enviado pelo sistema Torre de Controle.</p>
+            <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#6b7280;">Este é um e-mail automático enviado pelo sistema Project Flow.</p>
             <p style="margin:4px 0 0;font-family:Arial,sans-serif;font-size:11px;color:#006838;font-weight:bold;">ProjectFlow</p>
           </td>
         </tr>
