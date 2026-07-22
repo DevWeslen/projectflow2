@@ -4,13 +4,14 @@ import prisma from '@/lib/prisma'
 export async function GET() {
   try {
     let users = await prisma.user.findMany()
-    
+
     // Seed default users if empty
     if (users.length === 0) {
       await prisma.user.createMany({
         data: [
+          { id: 'system', name: 'Sistema', username: 'system', role: 'admin', password: '123' },
           { id: '1', name: 'Admin TI', username: 'admin', role: 'admin', password: '123' },
-          { id: '2', name: 'Diretoria Princesa', username: 'diretor', role: 'conselho', password: '123' },
+          { id: '2', name: 'Diretoria', username: 'diretor', role: 'conselho', password: '123' },
           { id: '3', name: 'Gerente Operacional', username: 'gerente', role: 'gerencia', password: '123' },
         ]
       })

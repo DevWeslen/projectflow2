@@ -57,7 +57,7 @@ const backgroundSync = async (url: string, method: string, data?: any) => {
       headers: { 'Content-Type': 'application/json' },
       body: data ? JSON.stringify(data) : undefined,
     })
-    
+
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}))
       console.error(`Sync error (${method} ${url}):`, errorData.error || res.statusText)
@@ -108,8 +108,9 @@ export const useProjectStore = create<ProjectStore>()(
       },
 
       users: [
+        { id: 'system', name: 'Sistema', username: 'system', role: 'admin' },
         { id: '1', name: 'Admin TI', username: 'admin', role: 'admin' },
-        { id: '2', name: 'Diretoria Princesa', username: 'diretor', role: 'conselho' },
+        { id: '2', name: 'Diretoria', username: 'diretor', role: 'conselho' },
         { id: '3', name: 'Gerente Operacional', username: 'gerente', role: 'gerencia' },
       ],
 
@@ -223,7 +224,7 @@ export const useProjectStore = create<ProjectStore>()(
           projects: [...state.projects, project],
           selectedProjectId: id
         }))
-        
+
         const success = await backgroundSync('/api/projects', 'POST', project)
         if (!success) {
           // Rollback on failure? For now just return null
