@@ -42,68 +42,66 @@ export async function POST(request: Request) {
       }
     })
 
-    // Disparo assíncrono de e-mail (fire-and-forget)
-    void (async () => {
-      try {
-        const userIds = [
-          data.ownerId,
-          ...(data.stakeholderIds || [])
-        ].filter(Boolean)
+    // Disparo síncrono de e-mail para garantir envio em ambientes serverless (Vercel)
+    try {
+      const userIds = [
+        data.ownerId,
+        ...(data.stakeholderIds || [])
+      ].filter(Boolean)
 
-        const uniqueUserIds = [...new Set(userIds)]
+      const uniqueUserIds = [...new Set(userIds)]
 
-        if (uniqueUserIds.length > 0) {
-          const users = await prisma.user.findMany({
-            where: { id: { in: uniqueUserIds } },
-            select: { username: true }
+      if (uniqueUserIds.length > 0) {
+        const users = await prisma.user.findMany({
+          where: { id: { in: uniqueUserIds } },
+          select: { username: true }
+        })
+
+        const internalEmails = users
+          .map((u: { username: string }) => u.username)
+          .filter((email) => email && email.includes('@'))
+
+        // Collect external stakeholder emails
+        const externalEmails = (data.externalStakeholders || [])
+          .map((es: { email: string }) => es.email)
+          .filter((email: string) => email && email.includes('@'))
+
+        const allEmails = [...new Set([...internalEmails, ...externalEmails])]
+
+        if (allEmails.length > 0) {
+          const project = await prisma.project.findUnique({
+            where: { id: task.projectId },
+            select: { name: true }
           })
+          const projectName = project ? project.name : 'Sem Projeto'
 
-          const internalEmails = users
-            .map((u: { username: string }) => u.username)
-            .filter((email) => email && email.includes('@'))
-
-          // Collect external stakeholder emails
-          const externalEmails = (data.externalStakeholders || [])
-            .map((es: { email: string }) => es.email)
-            .filter((email: string) => email && email.includes('@'))
-
-          const allEmails = [...new Set([...internalEmails, ...externalEmails])]
-
-          if (allEmails.length > 0) {
-            const project = await prisma.project.findUnique({
-              where: { id: task.projectId },
-              select: { name: true }
-            })
-            const projectName = project ? project.name : 'Sem Projeto'
-
-            await sendEmail({
-              to: allEmails,
-              subject: `Nova Tarefa Atribuída: ${task.title}`,
-              html: getTaskEmailTemplate(task, projectName)
-            })
-          }
-        } else {
-          // Still send to external stakeholders even if no internal ones
-          const externalEmails = (data.externalStakeholders || [])
-            .map((es: { email: string }) => es.email)
-            .filter((email: string) => email && email.includes('@'))
-          if (externalEmails.length > 0) {
-            const project = await prisma.project.findUnique({
-              where: { id: task.projectId },
-              select: { name: true }
-            })
-            const projectName = project ? project.name : 'Sem Projeto'
-            await sendEmail({
-              to: externalEmails,
-              subject: `Nova Tarefa Atribuída: ${task.title}`,
-              html: getTaskEmailTemplate(task, projectName)
-            })
-          }
+          await sendEmail({
+            to: allEmails,
+            subject: `Nova Tarefa Atribuída: ${task.title}`,
+            html: getTaskEmailTemplate(task, projectName)
+          })
         }
-      } catch (emailError) {
-        console.error('[Email] Falha ao enviar e-mail de nova tarefa:', emailError)
+      } else {
+        // Still send to external stakeholders even if no internal ones
+        const externalEmails = (data.externalStakeholders || [])
+          .map((es: { email: string }) => es.email)
+          .filter((email: string) => email && email.includes('@'))
+        if (externalEmails.length > 0) {
+          const project = await prisma.project.findUnique({
+            where: { id: task.projectId },
+            select: { name: true }
+          })
+          const projectName = project ? project.name : 'Sem Projeto'
+          await sendEmail({
+            to: externalEmails,
+            subject: `Nova Tarefa Atribuída: ${task.title}`,
+            html: getTaskEmailTemplate(task, projectName)
+          })
+        }
       }
-    })()
+    } catch (emailError) {
+      console.error('[Email] Falha ao enviar e-mail de nova tarefa:', emailError)
+    }
 
     return NextResponse.json({
       ...task,

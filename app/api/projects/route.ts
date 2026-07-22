@@ -46,58 +46,56 @@ export async function POST(request: Request) {
       }
     })
 
-    // Disparo assíncrono de e-mail (fire-and-forget)
-    void (async () => {
-      try {
-        const userIds = [
-          data.ownerId,
-          ...(data.memberIds || []),
-          ...(data.stakeholderIds || [])
-        ].filter(Boolean); // remove nulls/undefined
+    // Disparo síncrono de e-mail para garantir envio em ambientes serverless (Vercel)
+    try {
+      const userIds = [
+        data.ownerId,
+        ...(data.memberIds || []),
+        ...(data.stakeholderIds || [])
+      ].filter(Boolean); // remove nulls/undefined
 
-        const uniqueUserIds = [...new Set(userIds)];
+      const uniqueUserIds = [...new Set(userIds)];
 
-        if (uniqueUserIds.length > 0) {
-          const users = await prisma.user.findMany({
-            where: { id: { in: uniqueUserIds } },
-            select: { username: true } // username atua como e-mail
+      if (uniqueUserIds.length > 0) {
+        const users = await prisma.user.findMany({
+          where: { id: { in: uniqueUserIds } },
+          select: { username: true } // username atua como e-mail
+        });
+
+        const internalEmails = users
+          .map((u: { username: string }) => u.username)
+          .filter((email) => email && email.includes('@'));
+
+        // Collect external stakeholder emails
+        const externalEmails = (data.externalStakeholders || [])
+          .map((es: { email: string }) => es.email)
+          .filter((email: string) => email && email.includes('@'));
+
+        const allEmails = [...new Set([...internalEmails, ...externalEmails])];
+
+        if (allEmails.length > 0) {
+          await sendEmail({
+            to: allEmails,
+            subject: `Novo Projeto Criado: ${project.name}`,
+            html: getProjectEmailTemplate(project)
           });
-
-          const internalEmails = users
-            .map((u: { username: string }) => u.username)
-            .filter((email) => email && email.includes('@'));
-
-          // Collect external stakeholder emails
-          const externalEmails = (data.externalStakeholders || [])
-            .map((es: { email: string }) => es.email)
-            .filter((email: string) => email && email.includes('@'));
-
-          const allEmails = [...new Set([...internalEmails, ...externalEmails])];
-
-          if (allEmails.length > 0) {
-            await sendEmail({
-              to: allEmails,
-              subject: `Novo Projeto Criado: ${project.name}`,
-              html: getProjectEmailTemplate(project)
-            });
-          }
-        } else {
-          // Still send to external stakeholders even if no internal ones
-          const externalEmails = (data.externalStakeholders || [])
-            .map((es: { email: string }) => es.email)
-            .filter((email: string) => email && email.includes('@'));
-          if (externalEmails.length > 0) {
-            await sendEmail({
-              to: externalEmails,
-              subject: `Novo Projeto Criado: ${project.name}`,
-              html: getProjectEmailTemplate(project)
-            });
-          }
         }
-      } catch (emailError) {
-        console.error('[Email] Falha ao enviar e-mail de novo projeto:', emailError);
+      } else {
+        // Still send to external stakeholders even if no internal ones
+        const externalEmails = (data.externalStakeholders || [])
+          .map((es: { email: string }) => es.email)
+          .filter((email: string) => email && email.includes('@'));
+        if (externalEmails.length > 0) {
+          await sendEmail({
+            to: externalEmails,
+            subject: `Novo Projeto Criado: ${project.name}`,
+            html: getProjectEmailTemplate(project)
+          });
+        }
       }
-    })();
+    } catch (emailError) {
+      console.error('[Email] Falha ao enviar e-mail de novo projeto:', emailError);
+    }
 
     return NextResponse.json({
       ...project,
