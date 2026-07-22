@@ -9,6 +9,7 @@ export async function GET() {
       ...p,
       memberIds: JSON.parse(p.memberIds),
       stakeholderIds: p.stakeholderIds ? JSON.parse(p.stakeholderIds) : [],
+      externalStakeholders: p.externalStakeholders ? JSON.parse(p.externalStakeholders) : [],
       attachments: p.attachments ? JSON.parse(p.attachments) : [],
       generalKpis: JSON.parse(p.generalKpis),
       yearlyGoals: JSON.parse(p.yearlyGoals)
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
         ownerId: data.ownerId,
         memberIds: JSON.stringify(data.memberIds || []),
         stakeholderIds: JSON.stringify(data.stakeholderIds || []),
+        externalStakeholders: JSON.stringify(data.externalStakeholders || []),
         attachments: JSON.stringify(data.attachments || []),
         generalKpis: JSON.stringify(data.generalKpis || []),
         yearlyGoals: JSON.stringify(data.yearlyGoals || []),
@@ -61,13 +63,32 @@ export async function POST(request: Request) {
             select: { username: true } // username atua como e-mail
           });
 
-          const emails = users
+          const internalEmails = users
             .map((u: { username: string }) => u.username)
             .filter((email) => email && email.includes('@'));
 
-          if (emails.length > 0) {
+          // Collect external stakeholder emails
+          const externalEmails = (data.externalStakeholders || [])
+            .map((es: { email: string }) => es.email)
+            .filter((email: string) => email && email.includes('@'));
+
+          const allEmails = [...new Set([...internalEmails, ...externalEmails])];
+
+          if (allEmails.length > 0) {
             await sendEmail({
-              to: emails,
+              to: allEmails,
+              subject: `Novo Projeto Criado: ${project.name}`,
+              html: getProjectEmailTemplate(project)
+            });
+          }
+        } else {
+          // Still send to external stakeholders even if no internal ones
+          const externalEmails = (data.externalStakeholders || [])
+            .map((es: { email: string }) => es.email)
+            .filter((email: string) => email && email.includes('@'));
+          if (externalEmails.length > 0) {
+            await sendEmail({
+              to: externalEmails,
               subject: `Novo Projeto Criado: ${project.name}`,
               html: getProjectEmailTemplate(project)
             });
@@ -82,6 +103,7 @@ export async function POST(request: Request) {
       ...project,
       memberIds: JSON.parse(project.memberIds),
       stakeholderIds: JSON.parse(project.stakeholderIds || '[]'),
+      externalStakeholders: JSON.parse(project.externalStakeholders || '[]'),
       attachments: JSON.parse(project.attachments || '[]'),
       generalKpis: JSON.parse(project.generalKpis),
       yearlyGoals: JSON.parse(project.yearlyGoals)
@@ -101,6 +123,7 @@ export async function PUT(request: Request) {
     const updateData: any = { ...updates }
     if (updates.memberIds) updateData.memberIds = JSON.stringify(updates.memberIds)
     if (updates.stakeholderIds) updateData.stakeholderIds = JSON.stringify(updates.stakeholderIds)
+    if (updates.externalStakeholders) updateData.externalStakeholders = JSON.stringify(updates.externalStakeholders)
     if (updates.attachments) updateData.attachments = JSON.stringify(updates.attachments)
     if (updates.generalKpis) updateData.generalKpis = JSON.stringify(updates.generalKpis)
     if (updates.yearlyGoals) updateData.yearlyGoals = JSON.stringify(updates.yearlyGoals)
@@ -116,6 +139,7 @@ export async function PUT(request: Request) {
       ...project,
       memberIds: JSON.parse(project.memberIds),
       stakeholderIds: JSON.parse(project.stakeholderIds || '[]'),
+      externalStakeholders: JSON.parse(project.externalStakeholders || '[]'),
       attachments: JSON.parse(project.attachments || '[]'),
       generalKpis: JSON.parse(project.generalKpis),
       yearlyGoals: JSON.parse(project.yearlyGoals)

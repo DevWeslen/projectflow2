@@ -214,6 +214,7 @@ export const useProjectStore = create<ProjectStore>()(
           ownerId: projectData.ownerId || get().user?.id || 'system',
           memberIds: projectData.memberIds || [get().user?.id || 'system'],
           stakeholderIds: projectData.stakeholderIds || [],
+          externalStakeholders: projectData.externalStakeholders || [],
           attachments: projectData.attachments || [],
           status: 'active'
         }
@@ -271,6 +272,7 @@ export const useProjectStore = create<ProjectStore>()(
 
         const task: Task = {
           stakeholderIds: [],
+          externalStakeholders: [],
           attachments: [],
           ...taskData,
           id,

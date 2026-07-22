@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { METHODOLOGY_INFO, PROJECT_COLORS, type Methodology, type KPI } from '@/lib/types'
 import { LogoPrincesa } from '@/components/logo-princesa'
@@ -17,7 +17,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { Check, Plus, Trash2 } from 'lucide-react'
+import { getAllExternalStakeholders, normalizeStakeholderEmail } from '@/lib/stakeholders'
+import { Check, Plus, Trash2, Search } from 'lucide-react'
 import {
   Tooltip,
   TooltipContent,
@@ -33,7 +34,7 @@ interface ProjectFormDialogProps {
 }
 
 export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps) {
-  const { addProject, users, user: currentUser } = useProjectStore()
+  const { addProject, users, projects, tasks, user: currentUser } = useProjectStore()
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -45,6 +46,11 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
   const [totalSprints, setTotalSprints] = useState('4')
   const [memberIds, setMemberIds] = useState<string[]>([])
   const [stakeholderIds, setStakeholderIds] = useState<string[]>([])
+  const [externalStakeholders, setExternalStakeholders] = useState<{name: string, email: string}[]>([])
+  const [newExtStakeholderName, setNewExtStakeholderName] = useState('')
+  const [newExtStakeholderEmail, setNewExtStakeholderEmail] = useState('')
+  const [memberSearch, setMemberSearch] = useState('')
+  const [stakeholderSearch, setStakeholderSearch] = useState('')
   const [attachments, setAttachments] = useState<any[]>([])
   const [newAttachmentName, setNewAttachmentName] = useState('')
   const [newAttachmentUrl, setNewAttachmentUrl] = useState('')
@@ -63,6 +69,34 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
   const startYear = new Date().getFullYear()
   const endYear = deadline ? new Date(deadline).getFullYear() : startYear
   const numYears = Math.max(1, endYear - startYear + 1)
+
+  // Reset form fully when dialog opens
+  useEffect(() => {
+    if (open) {
+      resetForm()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  // Sorted + filtered user lists
+  const sortedUsers = [...users].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+  const filteredMembers = sortedUsers
+    .filter(u => u.id !== currentUser?.id)
+    .filter(u => u.name.toLowerCase().includes(memberSearch.toLowerCase()))
+  const filteredStakeholders = sortedUsers
+    .filter(u => u.name.toLowerCase().includes(stakeholderSearch.toLowerCase()))
+
+  const knownExternalStakeholders = getAllExternalStakeholders(projects, tasks)
+  const filteredKnownExternalStakeholders = knownExternalStakeholders.filter(es =>
+    es.name.toLowerCase().includes(stakeholderSearch.toLowerCase()) ||
+    es.email.toLowerCase().includes(stakeholderSearch.toLowerCase())
+  )
+
+  const manuallyAddedExternalStakeholders = externalStakeholders.filter(es =>
+    !knownExternalStakeholders.some(
+      known => normalizeStakeholderEmail(known.email) === normalizeStakeholderEmail(es.email)
+    )
+  )
 
   const handleAddAttachment = () => {
     if (!newAttachmentName.trim() || !newAttachmentUrl.trim()) return
@@ -122,6 +156,7 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
         ownerId: currentUser?.id || 'system',
         memberIds: [currentUser?.id || 'system', ...memberIds],
         stakeholderIds: stakeholderIds,
+        externalStakeholders: externalStakeholders.map(e => ({ id: generateId(), name: e.name, email: e.email })),
         attachments: attachments
       })
 
@@ -155,6 +190,11 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
     setKpiDistribution('fraction')
     setMemberIds([])
     setStakeholderIds([])
+    setExternalStakeholders([])
+    setNewExtStakeholderName('')
+    setNewExtStakeholderEmail('')
+    setMemberSearch('')
+    setStakeholderSearch('')
     setAttachments([])
     setNewAttachmentName('')
     setNewAttachmentUrl('')
@@ -332,8 +372,17 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground uppercase">Equipe do Projeto</label>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={memberSearch}
+                  onChange={e => setMemberSearch(e.target.value)}
+                  placeholder="Pesquisar..."
+                  className="pl-7 h-8 text-xs bg-background/30 border-border/40 mb-2"
+                />
+              </div>
               <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 rounded-xl bg-secondary/20 border border-border/50">
-                {users.filter(u => u.id !== currentUser?.id).map((u) => (
+                {filteredMembers.map((u) => (
                   <button
                     key={u.id}
                     type="button"
@@ -355,13 +404,25 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
                     {memberIds.includes(u.id) && <Check className="h-3 w-3" />}
                   </button>
                 ))}
+                {filteredMembers.length === 0 && (
+                  <p className="text-[10px] text-muted-foreground p-1">Nenhum resultado.</p>
+                )}
               </div>
             </div>
 
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground uppercase">Stakeholders (Interessados)</label>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={stakeholderSearch}
+                  onChange={e => setStakeholderSearch(e.target.value)}
+                  placeholder="Pesquisar..."
+                  className="pl-7 h-8 text-xs bg-background/30 border-border/40 mb-2"
+                />
+              </div>
               <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 rounded-xl bg-secondary/20 border border-border/50">
-                {users.map((u) => (
+                {filteredStakeholders.map((u) => (
                   <button
                     key={u.id}
                     type="button"
@@ -383,6 +444,93 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
                     {stakeholderIds.includes(u.id) && <Check className="h-3 w-3" />}
                   </button>
                 ))}
+
+                {filteredKnownExternalStakeholders.map((es) => {
+                  const isSelected = externalStakeholders.some(
+                    s => normalizeStakeholderEmail(s.email) === normalizeStakeholderEmail(es.email)
+                  )
+                  return (
+                    <button
+                      key={es.id || es.email}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          setExternalStakeholders(prev =>
+                            prev.filter(s => normalizeStakeholderEmail(s.email) !== normalizeStakeholderEmail(es.email))
+                          )
+                        } else {
+                          setExternalStakeholders(prev => [...prev, { name: es.name, email: es.email }])
+                        }
+                      }}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all border",
+                        isSelected
+                          ? "bg-[#006838] text-white border-[#006838] shadow-sm"
+                          : "bg-background/50 border-border/50 text-muted-foreground hover:border-[#006838]/50"
+                      )}
+                    >
+                      <span>{es.name}</span>
+                      <span className={cn("text-[9px] font-normal opacity-70", isSelected && "opacity-90")}>{es.email}</span>
+                      {isSelected && <Check className="h-3 w-3" />}
+                    </button>
+                  )
+                })}
+
+                {manuallyAddedExternalStakeholders.map((es, idx) => (
+                  <div key={`ext-${idx}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all border bg-primary/10 border-primary/30 text-primary-foreground">
+                    <div className="flex flex-col">
+                      <span>{es.name}</span>
+                      <span className="text-[9px] opacity-70 font-normal">{es.email}</span>
+                    </div>
+                    <button type="button" onClick={() => setExternalStakeholders(prev => prev.filter(s => normalizeStakeholderEmail(s.email) !== normalizeStakeholderEmail(es.email)))} className="hover:text-destructive ml-1">
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+
+                {filteredStakeholders.length === 0 && filteredKnownExternalStakeholders.length === 0 && manuallyAddedExternalStakeholders.length === 0 && (
+                  <p className="text-[10px] text-muted-foreground p-1">Nenhum stakeholder cadastrado ainda. Adicione um externo abaixo.</p>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                <Input
+                  value={newExtStakeholderName}
+                  onChange={e => setNewExtStakeholderName(e.target.value)}
+                  placeholder="Nome (Externo)"
+                  className="h-10 text-sm font-medium bg-background/50 border-border/50 flex-1"
+                />
+                <Input
+                  value={newExtStakeholderEmail}
+                  onChange={e => setNewExtStakeholderEmail(e.target.value)}
+                  placeholder="E-mail (Externo)"
+                  type="email"
+                  className="h-10 text-sm font-medium bg-background/50 border-border/50 flex-1"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      if (newExtStakeholderName.trim() && newExtStakeholderEmail.trim()) {
+                        setExternalStakeholders(prev => [...prev, { name: newExtStakeholderName.trim(), email: newExtStakeholderEmail.trim() }])
+                        setNewExtStakeholderName('')
+                        setNewExtStakeholderEmail('')
+                      }
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-10 text-sm font-bold shrink-0 px-4 hover:bg-primary/10 hover:text-primary transition-colors"
+                  onClick={() => {
+                    if (newExtStakeholderName.trim() && newExtStakeholderEmail.trim()) {
+                      setExternalStakeholders(prev => [...prev, { name: newExtStakeholderName.trim(), email: newExtStakeholderEmail.trim() }])
+                      setNewExtStakeholderName('')
+                      setNewExtStakeholderEmail('')
+                    }
+                  }}
+                >
+                  <Plus className="h-3 w-3 mr-1" /> Add
+                </Button>
               </div>
             </div>
           </div>

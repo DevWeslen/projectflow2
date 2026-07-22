@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { METHODOLOGY_INFO, ProjectStatus } from '@/lib/types'
+import { parseExternalStakeholders } from '@/lib/stakeholders'
 import { LogoPrincesa } from '@/components/logo-princesa'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -438,10 +439,11 @@ export function Dashboard({ onNewProject }: DashboardProps) {
                              </span>
                            </div>
                            
-                           {Array.isArray(project.stakeholderIds) && project.stakeholderIds.length > 0 && (
+                           {((Array.isArray(project.stakeholderIds) && project.stakeholderIds.length > 0) ||
+                             parseExternalStakeholders(project.externalStakeholders).length > 0) && (
                              <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground/60">
                                <Users className="h-2.5 w-2.5" />
-                               <span>{project.stakeholderIds.length}</span>
+                               <span>{(project.stakeholderIds?.length || 0) + parseExternalStakeholders(project.externalStakeholders).length}</span>
                              </div>
                            )}
                         </div>

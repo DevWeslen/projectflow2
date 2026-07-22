@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { TASK_STATUS_INFO, METHODOLOGY_INFO, autoStatusFromProgress, type Task, type TaskStatus, type Methodology } from '@/lib/types'
+import { getAllExternalStakeholders, normalizeStakeholderEmail, parseExternalStakeholders } from '@/lib/stakeholders'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import {
@@ -25,7 +26,7 @@ import {
 import { Slider } from '@/components/ui/slider'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { CalendarDays, Zap, Plus, Trash2, Check, User, Users, Link as LinkIcon, FileUp } from 'lucide-react'
+import { CalendarDays, Zap, Plus, Trash2, Check, User, Users, Link as LinkIcon, FileUp, Search } from 'lucide-react'
 import { cn, getFileUrl } from '@/lib/utils'
 import { AttachmentPromptDialog } from './attachment-prompt-dialog'
 
@@ -56,7 +57,10 @@ export function TaskFormDialog({
   const [externalOwnerName, setExternalOwnerName] = useState('')
   const [stakeholderIds, setStakeholderIds] = useState<string[]>([])
   const [externalStakeholderNames, setExternalStakeholderNames] = useState<string[]>([])
+  const [externalStakeholders, setExternalStakeholders] = useState<{name: string, email: string}[]>([])
   const [newExternalStakeholderName, setNewExternalStakeholderName] = useState('')
+  const [newExternalStakeholderEmail, setNewExternalStakeholderEmail] = useState('')
+  const [stakeholderSearch, setStakeholderSearch] = useState('')
   const [attachments, setAttachments] = useState<any[]>([])
   const [newAttachmentName, setNewAttachmentName] = useState('')
   const [newAttachmentUrl, setNewAttachmentUrl] = useState('')
@@ -66,7 +70,21 @@ export function TaskFormDialog({
   const [pendingTaskData, setPendingTaskData] = useState<any>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const { addTask, updateTask, tasks, users, user: currentUser } = useProjectStore()
+  const { addTask, updateTask, updateProject, tasks, users, projects, user: currentUser } = useProjectStore()
+
+  const currentProject = projects.find(p => p.id === projectId)
+  const projectExternalStakeholders = parseExternalStakeholders(currentProject?.externalStakeholders)
+  const selectableExternalStakeholders = getAllExternalStakeholders(projects, tasks, { projectId })
+
+  // Sorted + filtered stakeholders
+  const sortedUsers = [...users].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+  const filteredTaskStakeholders = sortedUsers.filter(u =>
+    u.name.toLowerCase().includes(stakeholderSearch.toLowerCase())
+  )
+  const filteredProjectExtStakeholders = selectableExternalStakeholders.filter((es) =>
+    es.name.toLowerCase().includes(stakeholderSearch.toLowerCase()) ||
+    es.email.toLowerCase().includes(stakeholderSearch.toLowerCase())
+  )
 
   // Get parent task name for context
   const parentTask = parentId ? tasks.find(t => t.id === parentId) : null
@@ -100,6 +118,7 @@ export function TaskFormDialog({
 
       setStakeholderIds(safeArray(editTask.stakeholderIds))
       setExternalStakeholderNames(safeArray(editTask.externalStakeholderNames))
+      setExternalStakeholders(parseExternalStakeholders(editTask.externalStakeholders).map(es => ({ name: es.name, email: es.email })))
       setAttachments(safeArray(editTask.attachments))
     } else {
       setTitle('')
@@ -112,6 +131,9 @@ export function TaskFormDialog({
       setExternalOwnerName('')
       setStakeholderIds([])
       setExternalStakeholderNames([])
+      setExternalStakeholders([])
+      setNewExternalStakeholderName('')
+      setNewExternalStakeholderEmail('')
       setAttachments([])
     }
   }, [editTask, open, currentUser])
@@ -137,6 +159,7 @@ export function TaskFormDialog({
     taskData.externalOwnerName = ownerId === 'external' ? externalOwnerName.trim() : undefined
     taskData.stakeholderIds = stakeholderIds
     taskData.externalStakeholderNames = externalStakeholderNames
+    taskData.externalStakeholders = externalStakeholders.map(e => ({ id: generateId(), name: e.name, email: e.email }))
     taskData.attachments = attachments
 
     const isCompleting = taskData.status === 'done' || taskData.progress === 100
@@ -149,14 +172,31 @@ export function TaskFormDialog({
     finalizeSave(taskData)
   }
 
+  const promoteExternalStakeholdersToProject = async () => {
+    const existingEmails = new Set(projectExternalStakeholders.map(es => normalizeStakeholderEmail(es.email)))
+    const newForProject = externalStakeholders.filter(
+      es => !existingEmails.has(normalizeStakeholderEmail(es.email))
+    )
+
+    if (newForProject.length === 0) return true
+
+    return updateProject(projectId, {
+      externalStakeholders: [
+        ...projectExternalStakeholders,
+        ...newForProject.map(e => ({ id: generateId(), name: e.name, email: e.email }))
+      ]
+    })
+  }
+
   const finalizeSave = async (taskData: any) => {
     setIsSubmitting(true)
     try {
+      let success = false
+
       if (editTask) {
-        const success = await updateTask(editTask.id, taskData)
+        success = await updateTask(editTask.id, taskData)
         if (success) {
           toast.success('Tarefa atualizada com sucesso!')
-          onOpenChange(false)
         } else {
           toast.error('Erro ao atualizar tarefa no servidor. Verifique sua conexão.')
         }
@@ -166,12 +206,23 @@ export function TaskFormDialog({
           parentId,
           projectId
         })
-        if (id) {
+        success = !!id
+        if (success) {
           toast.success('Tarefa criada com sucesso!')
-          onOpenChange(false)
         } else {
           toast.error('Erro ao criar tarefa no servidor. Verifique sua conexão.')
         }
+      }
+
+      if (success && externalStakeholders.length > 0) {
+        const promoted = await promoteExternalStakeholdersToProject()
+        if (!promoted) {
+          toast.warning('Tarefa salva, mas não foi possível reutilizar os stakeholders externos em outras atividades.')
+        }
+      }
+
+      if (success) {
+        onOpenChange(false)
       }
     } catch (err) {
       toast.error('Ocorreu um erro inesperado ao salvar a tarefa.')
@@ -207,7 +258,10 @@ export function TaskFormDialog({
     setExternalOwnerName('')
     setStakeholderIds([])
     setExternalStakeholderNames([])
+    setExternalStakeholders([])
     setNewExternalStakeholderName('')
+    setNewExternalStakeholderEmail('')
+    setStakeholderSearch('')
     setAttachments([])
     setNewAttachmentName('')
     setNewAttachmentUrl('')
@@ -426,8 +480,17 @@ export function TaskFormDialog({
               <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
                 <Users className="h-3 w-3" /> Stakeholders
               </label>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={stakeholderSearch}
+                  onChange={e => setStakeholderSearch(e.target.value)}
+                  placeholder="Pesquisar stakeholder..."
+                  className="pl-7 h-8 text-xs bg-background/30 border-border/40 mb-2"
+                />
+              </div>
               <div className="flex flex-wrap gap-1.5 p-2 rounded-md bg-background/50 border border-border/50 min-h-[40px]">
-                {users.map(u => (
+                {filteredTaskStakeholders.map(u => (
                   <button
                     key={u.id}
                     type="button"
@@ -450,17 +513,63 @@ export function TaskFormDialog({
                   </button>
                 ))}
 
+                {/* Project's External Stakeholders (selectable) */}
+                {filteredProjectExtStakeholders.map((es: any) => {
+                  const isSelected = externalStakeholders.some(s => s.email === es.email)
+                  return (
+                    <button
+                      key={es.id || es.email}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          setExternalStakeholders(prev => prev.filter(s => s.email !== es.email))
+                        } else {
+                          setExternalStakeholders(prev => [...prev, { name: es.name, email: es.email }])
+                        }
+                      }}
+                      className={cn(
+                        "group flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all",
+                        isSelected
+                          ? "bg-[#006838] text-white border-[#006838]"
+                          : "bg-secondary/50 border-border text-muted-foreground hover:border-[#006838]/50"
+                      )}
+                    >
+                      <span>{es.name}</span>
+                      <span className={cn("text-[8px] font-normal ml-0.5 opacity-70", isSelected && "opacity-90")}>{es.email}</span>
+                      {isSelected && <Check className="h-2 w-2 ml-0.5" />}
+                    </button>
+                  )
+                })}
+
                 {/* External Stakeholders Badges */}
                 {Array.isArray(externalStakeholderNames) && externalStakeholderNames.map((name, idx) => (
                   <div
-                    key={`ext-${idx}`}
+                    key={`ext-name-${idx}`}
                     className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-primary/10 border-primary/30 text-primary-foreground"
                   >
                     {name}
                     <button
                       type="button"
                       onClick={() => setExternalStakeholderNames(prev => prev.filter((_, i) => i !== idx))}
-                      className="hover:text-destructive transition-colors"
+                      className="hover:text-destructive transition-colors ml-1"
+                    >
+                      <Trash2 className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                ))}
+                {externalStakeholders.map((es, idx) => (
+                  <div
+                    key={`ext-${idx}`}
+                    className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-primary/10 border-primary/30 text-primary-foreground"
+                  >
+                    <div className="flex flex-col">
+                      <span>{es.name}</span>
+                      <span className="text-[8px] opacity-70 font-normal">{es.email}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setExternalStakeholders(prev => prev.filter((_, i) => i !== idx))}
+                      className="hover:text-destructive transition-colors ml-1"
                     >
                       <Trash2 className="h-2.5 w-2.5" />
                     </button>
@@ -469,31 +578,40 @@ export function TaskFormDialog({
               </div>
 
               {/* Add External Stakeholder Input */}
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2 mt-2">
                 <Input
                   value={newExternalStakeholderName}
                   onChange={(e) => setNewExternalStakeholderName(e.target.value)}
+                  placeholder="Nome (Externo)"
+                  className="h-10 text-sm font-medium bg-background/50 border-border/50 flex-1"
+                />
+                <Input
+                  value={newExternalStakeholderEmail}
+                  onChange={(e) => setNewExternalStakeholderEmail(e.target.value)}
+                  placeholder="E-mail (Externo)"
+                  type="email"
+                  className="h-10 text-sm font-medium bg-background/50 border-border/50 flex-1"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault()
-                      if (newExternalStakeholderName.trim()) {
-                        setExternalStakeholderNames(prev => [...prev, newExternalStakeholderName.trim()])
+                      if (newExternalStakeholderName.trim() && newExternalStakeholderEmail.trim()) {
+                        setExternalStakeholders(prev => [...prev, { name: newExternalStakeholderName.trim(), email: newExternalStakeholderEmail.trim() }])
                         setNewExternalStakeholderName('')
+                        setNewExternalStakeholderEmail('')
                       }
                     }
                   }}
-                  placeholder="Novo Stakeholder Externo..."
-                  className="h-8 text-xs bg-background/30"
                 />
                 <Button
                   type="button"
                   size="sm"
-                  className="h-8 px-3 text-[10px] font-bold"
+                  className="h-10 text-sm font-bold shrink-0 px-4 hover:bg-primary/10 hover:text-primary transition-colors"
                   variant="outline"
                   onClick={() => {
-                    if (newExternalStakeholderName.trim()) {
-                      setExternalStakeholderNames(prev => [...prev, newExternalStakeholderName.trim()])
+                    if (newExternalStakeholderName.trim() && newExternalStakeholderEmail.trim()) {
+                      setExternalStakeholders(prev => [...prev, { name: newExternalStakeholderName.trim(), email: newExternalStakeholderEmail.trim() }])
                       setNewExternalStakeholderName('')
+                      setNewExternalStakeholderEmail('')
                     }
                   }}
                 >

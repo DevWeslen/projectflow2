@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useProjectStore } from '@/lib/store'
 import { METHODOLOGY_INFO, type Task } from '@/lib/types'
 import { cn, getFileUrl } from '@/lib/utils'
+import { parseExternalStakeholders } from '@/lib/stakeholders'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
@@ -189,14 +190,21 @@ export function ProjectView({ projectId }: ProjectViewProps) {
                    />
                 </div>
 
-                {Array.isArray(project.stakeholderIds) && project.stakeholderIds.length > 0 && (
+                {((Array.isArray(project.stakeholderIds) && project.stakeholderIds.length > 0) ||
+                  parseExternalStakeholders(project.externalStakeholders).length > 0) && (
                   <div className="flex flex-col gap-1">
                     <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Interessados</span>
                     <UserAvatarGroup 
-                      users={project.stakeholderIds.map(id => {
-                        const u = useProjectStore.getState().users.find(user => user.id === id)
-                        return { name: u?.name || 'User', role: 'Stakeholder' }
-                      })} 
+                      users={[
+                        ...(project.stakeholderIds || []).map(id => {
+                          const u = useProjectStore.getState().users.find(user => user.id === id)
+                          return { name: u?.name || 'User', role: 'Stakeholder' }
+                        }),
+                        ...parseExternalStakeholders(project.externalStakeholders).map(es => ({
+                          name: es.name,
+                          role: es.email,
+                        })),
+                      ]} 
                       size="sm"
                     />
                   </div>

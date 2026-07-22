@@ -8,6 +8,7 @@ export async function GET() {
     return NextResponse.json(tasks.map(t => ({
       ...t,
       stakeholderIds: t.stakeholderIds ? JSON.parse(t.stakeholderIds) : [],
+      externalStakeholders: t.externalStakeholders ? JSON.parse(t.externalStakeholders) : [],
       externalStakeholderNames: t.externalStakeholderNames ? JSON.parse(t.externalStakeholderNames) : [],
       attachments: t.attachments ? JSON.parse(t.attachments) : []
     })))
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
         parentId: data.parentId,
         ownerId: data.ownerId,
         stakeholderIds: JSON.stringify(data.stakeholderIds || []),
+        externalStakeholders: JSON.stringify(data.externalStakeholders || []),
         externalStakeholderNames: JSON.stringify(data.externalStakeholderNames || []),
         attachments: JSON.stringify(data.attachments || []),
         title: data.title,
@@ -56,11 +58,18 @@ export async function POST(request: Request) {
             select: { username: true }
           })
 
-          const emails = users
+          const internalEmails = users
             .map((u: { username: string }) => u.username)
             .filter((email) => email && email.includes('@'))
 
-          if (emails.length > 0) {
+          // Collect external stakeholder emails
+          const externalEmails = (data.externalStakeholders || [])
+            .map((es: { email: string }) => es.email)
+            .filter((email: string) => email && email.includes('@'))
+
+          const allEmails = [...new Set([...internalEmails, ...externalEmails])]
+
+          if (allEmails.length > 0) {
             const project = await prisma.project.findUnique({
               where: { id: task.projectId },
               select: { name: true }
@@ -68,7 +77,24 @@ export async function POST(request: Request) {
             const projectName = project ? project.name : 'Sem Projeto'
 
             await sendEmail({
-              to: emails,
+              to: allEmails,
+              subject: `Nova Tarefa Atribuída: ${task.title}`,
+              html: getTaskEmailTemplate(task, projectName)
+            })
+          }
+        } else {
+          // Still send to external stakeholders even if no internal ones
+          const externalEmails = (data.externalStakeholders || [])
+            .map((es: { email: string }) => es.email)
+            .filter((email: string) => email && email.includes('@'))
+          if (externalEmails.length > 0) {
+            const project = await prisma.project.findUnique({
+              where: { id: task.projectId },
+              select: { name: true }
+            })
+            const projectName = project ? project.name : 'Sem Projeto'
+            await sendEmail({
+              to: externalEmails,
               subject: `Nova Tarefa Atribuída: ${task.title}`,
               html: getTaskEmailTemplate(task, projectName)
             })
@@ -82,6 +108,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ...task,
       stakeholderIds: JSON.parse(task.stakeholderIds || '[]'),
+      externalStakeholders: JSON.parse(task.externalStakeholders || '[]'),
       externalStakeholderNames: JSON.parse(task.externalStakeholderNames || '[]'),
       attachments: JSON.parse(task.attachments || '[]')
     })
@@ -99,6 +126,7 @@ export async function PUT(request: Request) {
 
     const updateData: any = { ...updates }
     if (updates.stakeholderIds) updateData.stakeholderIds = JSON.stringify(updates.stakeholderIds)
+    if (updates.externalStakeholders) updateData.externalStakeholders = JSON.stringify(updates.externalStakeholders)
     if (updates.externalStakeholderNames) updateData.externalStakeholderNames = JSON.stringify(updates.externalStakeholderNames)
     if (updates.attachments) updateData.attachments = JSON.stringify(updates.attachments)
     if (updates.deadline) updateData.deadline = new Date(updates.deadline)
@@ -112,6 +140,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({
       ...task,
       stakeholderIds: JSON.parse(task.stakeholderIds || '[]'),
+      externalStakeholders: JSON.parse(task.externalStakeholders || '[]'),
       externalStakeholderNames: JSON.parse(task.externalStakeholderNames || '[]'),
       attachments: JSON.parse(task.attachments || '[]')
     })

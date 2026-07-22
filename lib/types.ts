@@ -12,6 +12,12 @@ export interface User {
   password?: string
 }
 
+export interface ExternalStakeholder {
+  id: string
+  name: string
+  email: string
+}
+
 export type AGGREGATION_MODE = 'sum' | 'average'
 export type DISTRIBUTION_MODE = 'fraction' | 'global'
 
@@ -67,6 +73,7 @@ export interface Task {
   projectId: string
   ownerId?: string
   stakeholderIds?: string[]
+  externalStakeholders?: ExternalStakeholder[]
   externalStakeholderNames?: string[]
   attachments?: Attachment[]
   actualStartDate?: Date
@@ -97,6 +104,7 @@ export interface Project {
   ownerId: string
   memberIds: string[]
   stakeholderIds?: string[]
+  externalStakeholders?: ExternalStakeholder[]
   attachments?: Attachment[]
   actualStartDate?: Date
   actualEndDate?: Date
